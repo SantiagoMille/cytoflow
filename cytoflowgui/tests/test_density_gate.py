@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,22 +26,23 @@ Created on Jan 5, 2018
 import os, unittest, tempfile
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.workflow_item import WorkflowItem
 from cytoflowgui.tests.test_base import ImportedDataTest
-from cytoflowgui.op_plugins import DensityGatePlugin
-from cytoflowgui.subset import CategorySubset, RangeSubset
-from cytoflowgui.serialization import load_yaml, save_yaml
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import DensityGateWorkflowOp, DensityGateWorkflowView
+from cytoflowgui.workflow.views import DensityPlotParams
+from cytoflowgui.workflow.subset import CategorySubset, RangeSubset
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
 
 class TestDensityGate(ImportedDataTest):
     
     def setUp(self):
         super().setUp()
 
-        plugin = DensityGatePlugin()
-        self.op = op = plugin.get_operation()
+        self.addTypeEqualityFunc(DensityGateWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(DensityGateWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(DensityPlotParams, 'assertHasTraitsEqual')
+
+        self.op = op = DensityGateWorkflowOp()
         
         op.name = "Density"
         op.xchannel = "V2-A"
@@ -58,7 +59,6 @@ class TestDensityGate(ImportedDataTest):
         self.wi = wi = WorkflowItem(operation = op,
                                     status = 'waiting',
                                     view_error = "Not yet plotted")
-        wi.default_view = op.default_view()
         wi.views.append(self.wi.default_view)        
         self.workflow.workflow.append(wi)
         self.workflow.selected = wi
@@ -159,14 +159,30 @@ class TestDensityGate(ImportedDataTest):
              
         self.maxDiff = None
                       
-        self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                             new_op.trait_get(self.op.copyable_trait_names()))
-         
-         
+        self.assertEqual(self.op, new_op)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+           
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
          
         exec(code)
         nb_data = locals()['ex_3'].data

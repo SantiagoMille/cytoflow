@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,29 +26,28 @@ Created on Jan 5, 2018
 import os, unittest, tempfile
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.workflow_item import WorkflowItem
-from cytoflowgui.tests.test_base import TasbeTest, params_traits_comparator
-from cytoflowgui.op_plugins import ColorTranslationPlugin
-from cytoflowgui.op_plugins.color_translation import _Control
-from cytoflowgui.subset import BoolSubset
-from cytoflowgui.serialization import load_yaml, save_yaml
+from cytoflowgui.tests.test_base import TasbeTest
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import ColorTranslationWorkflowOp, ColorTranslationWorkflowView, ColorTranslationControl
+from cytoflowgui.workflow.subset import BoolSubset
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
 
 class TestColorTranslation(TasbeTest):
     
     def setUp(self):
         super().setUp()
-         
-        plugin = ColorTranslationPlugin()
-        self.op = op = plugin.get_operation()
+        
+        self.addTypeEqualityFunc(ColorTranslationWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ColorTranslationWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ColorTranslationControl, 'assertHasTraitsEqual')
+
+        self.op = op = ColorTranslationWorkflowOp()
         
         self.cwd = os.path.dirname(os.path.abspath(__file__))
         self.rby_file = self.cwd + "/../../cytoflow/tests/data/tasbe/rby.fcs"
-        op.controls_list = [_Control(from_channel = "Pacific Blue-A",
-                                     to_channel = "FITC-A",
-                                     file = self.rby_file)]
+        op.controls_list = [ColorTranslationControl(from_channel = "Pacific Blue-A",
+                                                    to_channel = "FITC-A",
+                                                    file = self.rby_file)]
 #         op.channels = ["FITC-A", "Pacific Blue-A", "PE-Tx-Red-YG-A"]
         op.subset_list.append(BoolSubset(name = "Morpho"))
         op.subset_list[0].selected_t = True
@@ -56,7 +55,6 @@ class TestColorTranslation(TasbeTest):
         self.wi = wi = WorkflowItem(operation = op,
                                     status = 'waiting',
                                     view_error = "Not yet plotted")
-        wi.default_view = self.op.default_view()
         wi.views.append(self.wi.default_view)
         self.workflow.workflow.append(wi)
         self.workflow.selected = self.wi
@@ -70,9 +68,9 @@ class TestColorTranslation(TasbeTest):
   
     def testAddChannel(self):
         self.workflow.wi_sync(self.wi, 'status', 'waiting')
-        self.op.controls_list.append(_Control(from_channel = "PE-Tx-Red-YG-A",
-                                              to_channel = "FITC-A",
-                                              file = self.rby_file))
+        self.op.controls_list.append(ColorTranslationControl(from_channel = "PE-Tx-Red-YG-A",
+                                                             to_channel = "FITC-A",
+                                                             file = self.rby_file))
         self.workflow.wi_waitfor(self.wi, 'status', 'invalid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
         
@@ -124,25 +122,41 @@ class TestColorTranslation(TasbeTest):
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
     def testSerialize(self):
-        with params_traits_comparator(_Control):
-            fh, filename = tempfile.mkstemp()
-            try:
-                os.close(fh)
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
 
-                save_yaml(self.op, filename)
-                new_op = load_yaml(filename)
-            finally:
-                os.unlink(filename)
+            save_yaml(self.op, filename)
+            new_op = load_yaml(filename)
+        finally:
+            os.unlink(filename)
 
-            self.maxDiff = None
+        self.maxDiff = None
 
-            self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                                 new_op.trait_get(self.op.copyable_trait_names()))
-
+        self.assertEqual(self.op, new_op)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+           
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
         
         exec(code)
         nb_data = locals()['ex_2'].data

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -112,10 +112,6 @@ class TableView(HasStrictTraits):
     # traits   
     id = Constant("edu.mit.synbio.cytoflow.view.table")
     friendly_id = Constant("Table View") 
-
-    REMOVED_ERROR = Constant("Statistics have changed dramatically in 0.5; please see the documentation")
-    channel = util.Removed(err_string = REMOVED_ERROR)
-    function = util.Removed(err_string = REMOVED_ERROR)
     
     statistic = Tuple(Str, Str)
     row_facet = Str

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,26 +24,26 @@ Created on Jan 4, 2018
 '''
 import unittest, tempfile, os
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.tests.test_base import ImportedDataTest, Base2DViewTest, params_traits_comparator
-from cytoflowgui.view_plugins.density import DensityPlugin, DensityPlotParams
-from cytoflowgui.serialization import save_yaml, load_yaml
+from cytoflowgui.tests.test_base import ImportedDataTest, Base2DViewTest
+from cytoflowgui.workflow.views import DensityWorkflowView, DensityPlotParams
+from cytoflowgui.workflow.serialization import save_yaml, load_yaml
 
 class TestDensityPlot(ImportedDataTest, Base2DViewTest):
 
     def setUp(self):
         super().setUp()
+        
+        self.addTypeEqualityFunc(DensityWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(DensityPlotParams, 'assertHasTraitsEqual')
 
         self.wi = wi = self.workflow.workflow[-1]
-        plugin = DensityPlugin()
-        self.view = view = plugin.get_view()
+        self.view = view = DensityWorkflowView()
         wi.views.append(view)
         wi.current_view = view
         self.workflow.selected = self.wi
         
         super().setUpView()
+        self.workflow.wi_waitfor(self.wi, 'view_error', '')
                 
     def testBaseDensity(self):
         pass
@@ -131,25 +131,41 @@ class TestDensityPlot(ImportedDataTest, Base2DViewTest):
                             
         
     def testSerialize(self):
-        with params_traits_comparator(DensityPlotParams):
-            fh, filename = tempfile.mkstemp()
-            try:
-                os.close(fh)
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
 
-                save_yaml(self.view, filename)
-                new_view = load_yaml(filename)
-            finally:
-                os.unlink(filename)
+            save_yaml(self.view, filename)
+            new_view = load_yaml(filename)
+        finally:
+            os.unlink(filename)
 
-            self.maxDiff = None
+        self.maxDiff = None
 
-            self.assertDictEqual(self.view.trait_get(self.view.copyable_trait_names()),
-                                 new_view.trait_get(self.view.copyable_trait_names()))
-
+        self.assertEqual(self.view, new_view)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+           
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
            
         exec(code) # smoke test
         

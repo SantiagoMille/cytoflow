@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,20 +23,42 @@ Created on Jan 4, 2018
 @author: brian
 '''
 
+# select the 'null' pyface toolkit. an exception is raised if the qt toolkit
+# is subsequently imported, but that's better than trying to actually create
+# a Qt app if PyQt is accidentally imported.
+
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = 'null'
+
+# even so, sometimes events get dispatched to the UI handler.  
+# make sure they go into a black hole
+from traits.trait_notifiers import set_ui_handler
+set_ui_handler(lambda *x, **y: None)
+
+# use the sphinx autodoc module-mocker to mock out traitsui.qt4
+# because when it's imported, it starts a Qt Application
+
+from cytoflowgui.tests.sphinx_mock import MockFinder
+import sys; sys.meta_path.insert(0, MockFinder(['traitsui.qt4']))  
+
+# make sure that even if we're running locally, we're using the Agg output
+import matplotlib
+matplotlib.use("Agg")
+
+from traits.api import HasTraits, TraitListObject, TraitDictObject
+
 import unittest, multiprocessing, os, logging
 from logging.handlers import QueueHandler, QueueListener
 
-from cytoflowgui.workflow import Workflow, RemoteWorkflow
-from cytoflowgui.workflow_item import WorkflowItem
-from cytoflowgui.op_plugins import ImportPlugin, ThresholdPlugin, ChannelStatisticPlugin
-from cytoflowgui.subset import CategorySubset, RangeSubset
-from cytoflowgui.serialization import traits_eq, traits_hash
-from cytoflowgui.util import CallbackHandler
+from cytoflowgui.workflow import LocalWorkflow, RemoteWorkflow
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import ImportWorkflowOp, ChannelStatisticWorkflowOp, ThresholdWorkflowOp, ThresholdSelectionView
+from cytoflowgui.workflow.subset import CategorySubset, RangeSubset
+from cytoflowgui.workflow.serialization import traits_eq, traits_hash
+from cytoflowgui.utility import CallbackHandler
 
-def remote_main(parent_workflow_conn, parent_mpl_conn, log_q, running_event):
-    import matplotlib
-    matplotlib.use('agg')
-    
+
+def remote_main(parent_workflow_conn, log_q, running_event):
     # this should only ever be main method after a spawn() call 
     # (not fork). So we should have a fresh logger to set up.
         
@@ -47,18 +69,22 @@ def remote_main(parent_workflow_conn, parent_mpl_conn, log_q, running_event):
     # make sure that ALL messages get queued in the remote 
     # process -- we'll filter/handle then in the local
     # process
-    logging.getLogger().setLevel(logging.DEBUG) 
+    logging.getLogger().setLevel(logging.DEBUG)   
 
     running_event.set()
-    RemoteWorkflow().run(parent_workflow_conn, parent_mpl_conn, headless = True)
+    RemoteWorkflow().run(parent_workflow_conn)
 
 class WorkflowTest(unittest.TestCase):
     
     def setUp(self):
         
+        self.addTypeEqualityFunc(HasTraits, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(WorkflowItem, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(TraitListObject, 'assertTraitListEqual')
+        self.addTypeEqualityFunc(TraitDictObject, 'assertTraitDictEqual')
+                
         # communications channels
         parent_workflow_conn, child_workflow_conn = multiprocessing.Pipe()  
-        parent_mpl_conn, child_matplotlib_conn = multiprocessing.Pipe()
         running_event = multiprocessing.Event()
         
         # logging
@@ -76,7 +102,6 @@ class WorkflowTest(unittest.TestCase):
         remote_process = multiprocessing.Process(target = remote_main,
                                                  name = "remote process",
                                                  args = [parent_workflow_conn,
-                                                         parent_mpl_conn,
                                                          log_q,
                                                          running_event])
         
@@ -84,20 +109,45 @@ class WorkflowTest(unittest.TestCase):
         remote_process.start() 
         running_event.wait()
         
-        self.workflow = Workflow((child_workflow_conn, child_matplotlib_conn))
+        self.workflow = LocalWorkflow(child_workflow_conn)
         self.remote_process = remote_process
 
     def tearDown(self):
         self.workflow.shutdown_remote_process(self.remote_process)
         self.queue_listener.stop()
         
+    def assertHasTraitsEqual(self, t1, t2, msg=None):
+        metadata = {'transient' : lambda t: t is not True,
+                    'status' : lambda t: t is not True}
+        
+        d1 = t1.trait_get(t1.copyable_trait_names(**metadata))
+        d2 = t2.trait_get(t1.copyable_trait_names(**metadata))
+        self.assertEqual(set(d1.keys()), set(d2.keys()))
+        for k in d1.keys():
+            self.assertEqual(d1[k], d2[k])
+            
+    def assertTraitListEqual(self, t1, t2, msg=None):
+        self.assertEqual(len(t1), len(t2))
+        
+        for o1, o2 in zip(t1, t2):
+            self.assertEqual(o1, o2)
+    
+    def assertTraitDictEqual(self, t1, t2, msg=None):
+        self.assertEqual(set(t1.keys()), set(t2.keys()))
+        
+        for k in t1.keys():
+            self.assertEqual(t1[k], t2[k])
+
+        
 class ImportedDataTest(WorkflowTest):
     
     def setUp(self):
         super().setUp()
         
-        import_plugin = ImportPlugin()
-        import_op = import_plugin.get_operation()
+        self.addTypeEqualityFunc(ImportWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ChannelStatisticWorkflowOp, 'assertHasTraitsEqual')
+        
+        import_op = ImportWorkflowOp()
 
         from cytoflow import Tube
         
@@ -135,9 +185,7 @@ class ImportedDataTest(WorkflowTest):
         self.workflow.wi_waitfor(wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[0].result is not None"))
 
-        stats_plugin = ChannelStatisticPlugin()
-
-        stats_op_1 = stats_plugin.get_operation()
+        stats_op_1 = ChannelStatisticWorkflowOp()
         stats_op_1.name = "MeanByDoxIP"
         stats_op_1.channel = "Y2-A"
         stats_op_1.statistic_name = "Geom.Mean"
@@ -155,7 +203,7 @@ class ImportedDataTest(WorkflowTest):
         self.workflow.workflow.append(stats_wi_1)
         self.workflow.wi_waitfor(stats_wi_1, 'status', 'valid')
         
-        stats_op_2 = stats_plugin.get_operation()
+        stats_op_2 = ChannelStatisticWorkflowOp()
         stats_op_2.name = "SDByDoxIP"
         stats_op_2.channel = "Y2-A"
         stats_op_2.statistic_name = "Geom.SD"
@@ -171,6 +219,7 @@ class ImportedDataTest(WorkflowTest):
                                   status = "waiting",
                                   view_error = "Not yet plotted")
         self.workflow.workflow.append(stats_wi_2)
+        self.workflow.selected = stats_wi_2
         self.workflow.wi_waitfor(stats_wi_2, 'status', 'valid')
 
 class TasbeTest(WorkflowTest):
@@ -178,8 +227,10 @@ class TasbeTest(WorkflowTest):
     def setUp(self):
         super().setUp()
         
-        plugin = ImportPlugin()
-        op = plugin.get_operation()
+        self.addTypeEqualityFunc(ThresholdWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ThresholdSelectionView, 'assertHasTraitsEqual')
+        
+        op = ImportWorkflowOp()
 
         from cytoflow import Tube
              
@@ -197,8 +248,7 @@ class TasbeTest(WorkflowTest):
         self.workflow.wi_waitfor(wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[0].result is not None"))
         
-        plugin = ThresholdPlugin()
-        op = plugin.get_operation()
+        op = ThresholdWorkflowOp()
                 
         op.name = "Morpho"
         op.channel = "FSC-A"
@@ -206,7 +256,8 @@ class TasbeTest(WorkflowTest):
 
         wi = WorkflowItem(operation = op,
                           status = 'waiting')
-        self.workflow.workflow.append(wi)      
+        self.workflow.workflow.append(wi)     
+        self.workflow.selected = wi 
         self.workflow.wi_waitfor(wi, 'status', 'valid')
 
 
@@ -268,8 +319,7 @@ class BaseViewTest:
         
         # colwrap
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
-        self.view.variable = "IP"
-        self.view.xfacet = "Dox"
+        self.view.xfacet = "IP"
         self.view.plot_params.col_wrap = 2
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
            
@@ -556,10 +606,7 @@ class Base1DStatisticsViewTest(BaseStatisticsViewTest):
     
     def setUpView(self):
         super().setUpView()
-        
-        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
         self.view.statistic = ("MeanByDoxIP", "Geom.Mean")
-        self.workflow.wi_waitfor(self.wi, 'view_error', '')
         
     # error_statistic
     def testErrorStatistic(self):
@@ -599,11 +646,8 @@ class Base2DStatisticsViewTest(BaseStatisticsViewTest):
     def setUpView(self):
         
         super().setUpView()
-        
-        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
         self.view.xstatistic = ("MeanByDoxIP", "Geom.Mean")
         self.view.ystatistic = ("MeanByDoxIP2", "Geom.Mean")
-        self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
     # both error bars
     def testErrorBars(self):
@@ -679,18 +723,5 @@ class Base2DStatisticsViewTest(BaseStatisticsViewTest):
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
         self.view.plot_params.ylim = (0, 1000)
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
-        
 
-class params_traits_comparator(object):
-    def __init__(self, cls):
-        self.cls = cls
-        self._eq = cls.__eq__
-        self._hash = cls.__hash__
-
-    def __enter__(self):
-        self.cls.__eq__ = traits_eq
-        self.cls.__hash__ = traits_hash
-
-    def __exit__(self, *args):
-        self.cls.__eq__ = self._eq
-        self.cls.__hash__ = self._hash
+    

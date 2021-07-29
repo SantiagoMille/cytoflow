@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,9 +22,10 @@ cytoflow.operations.bleedthrough_linear
 ---------------------------------------
 '''
 import os, math
+from natsort import natsorted
 
-from traits.api import HasStrictTraits, Str, File, Dict, Instance, \
-                       Constant, Tuple, Float, Any, provides
+from traits.api import (HasStrictTraits, Str, File, Dict, Instance,
+                        Constant, Tuple, Float, Any, provides)
     
 import numpy as np
 import pandas as pd
@@ -177,9 +178,10 @@ class BleedthroughLinearOp(HasStrictTraits):
                                            "Can't find file {0} for channel {1}."
                                            .format(self.controls[channel], channel))
                 
-        self.spillover.clear()
+        self.spillover = {}
         self._sample.clear()
                 
+        spillover = {}
         for channel in channels:
             
             # make a little Experiment
@@ -254,7 +256,10 @@ class BleedthroughLinearOp(HasStrictTraits):
                                                    tube_data[to_channel],
                                                    0)
                  
-                self.spillover[(from_channel, to_channel)] = popt[0]
+                spillover[(from_channel, to_channel)] = popt[0]
+                
+        # set this atomically - to support GUI
+        self.spillover = spillover
                 
     def apply(self, experiment):
         """Applies the bleedthrough correction to an experiment.
@@ -304,7 +309,7 @@ class BleedthroughLinearOp(HasStrictTraits):
                                            "Must have both (from, to) and "
                                            "(to, from) keys in self.spillover")
         
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = True)
         
         # the completely arbitrary ordering of the channels
         channels = list(set([x for (x, _) in list(self.spillover.keys())]))
@@ -377,8 +382,8 @@ class BleedthroughLinearDiagnostic(HasStrictTraits):
     """
     
     # traits   
-    id = Constant("edu.mit.synbio.cytoflow.view.autofluorescencediagnosticview")
-    friendly_id = Constant("Autofluorescence Diagnostic") 
+    id = Constant("edu.mit.synbio.cytoflow.view.linearbleedthroughdiagnostic")
+    friendly_id = Constant("Linear Bleedthrough Diagnostic") 
     
     subset = Str
     
@@ -406,11 +411,12 @@ class BleedthroughLinearDiagnostic(HasStrictTraits):
         kwargs.setdefault('alpha', 0.5)
         kwargs.setdefault('antialiased', True)
         
-        fig, axes2d = plt.subplots(nrows=3, ncols=3)    
+        channels = natsorted(list(set([x for (x, _) in list(self.op.spillover.keys())])))
+        num_channels = len(channels)
+        _, axes2d = plt.subplots(nrows=num_channels, ncols=num_channels)    
         
         # the completely arbitrary ordering of the channels
-        channels = list(set([x for (x, _) in list(self.op.spillover.keys())]))
-        num_channels = len(channels)
+        # num_channels = len(channels)
 
         for to_idx, row in enumerate(axes2d):
             for from_idx, ax in enumerate(row):

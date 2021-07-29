@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ from pathlib import Path
 import pandas
         
 from traits.api import (HasStrictTraits, Instance, Str, Int, List, Bool, Enum, 
-                        Property, BaseCStr, CStr, on_trait_change, Dict, Event,
+                        Property, CStr, observe, Dict, Event,
                         cached_property, CFloat, BaseCBool, TraitError)
                        
 from traitsui.api import (View, Item, TableEditor, Controller, InstanceEditor, 
@@ -56,9 +56,10 @@ from traitsui.table_column import ObjectColumn
 from cytoflow import Tube as CytoflowTube
 from cytoflow import Experiment, ImportOp
 from cytoflow.operations.import_op import check_tube, parse_tube
+from cytoflowgui.workflow.operations.import_op import ValidPythonIdentifier
 import cytoflow.utility as util
 
-from cytoflowgui.vertical_list_editor import VerticalListEditor
+from cytoflowgui.editors import VerticalListEditor
 
 def not_true ( value ):
     return (value is not True)
@@ -183,16 +184,7 @@ class ExperimentColumn(ObjectColumn):
         return self.name
     
 
-class ValidPythonIdentifier(BaseCStr):
 
-    info_text = 'a valid python identifier'
-     
-    def validate(self, obj, name, value):
-        value = super(ValidPythonIdentifier, self).validate(obj, name, value)
-        if util.sanitize_identifier(value) == value:
-            return value 
-         
-        self.error(obj, name, value)
 
                  
 def eval_bool(x):
@@ -292,7 +284,7 @@ class ExperimentDialogModel(HasStrictTraits):
         
         if import_op.tubes:
             try:
-                self.dummy_experiment = import_op.apply(metadata_only = True, force = True)
+                self.dummy_experiment = import_op.apply(metadata_only = True)
             except Exception as e:
                 warning(None,
                         "Had trouble loading some of the experiment's FCS "
@@ -316,7 +308,7 @@ class ExperimentDialogModel(HasStrictTraits):
                         tube.conditions[trait.name] = tube.trait_get()[trait.name]
     
     
-    @on_trait_change('tubes_items')
+    @observe('tubes:items')
     def _tubes_items(self, event):
         for tube in event.added:
             for trait in self.tube_traits:
@@ -339,7 +331,7 @@ class ExperimentDialogModel(HasStrictTraits):
             else:
                 self.counter[tube_hash] = 1
                  
-    @on_trait_change('tube_traits_items')
+    @observe('tube_traits:items')
     def _tube_traits_changed(self, event):
         for trait in event.added:
             if not trait.name:
@@ -376,8 +368,12 @@ class ExperimentDialogModel(HasStrictTraits):
             else:
                 self.counter[tube_hash] = 1
             
-    @on_trait_change('tube_traits:name')
-    def _on_trait_name_change(self, trait, _, old_name, new_name):
+    @observe('tube_traits:items:name')
+    #def _on_trait_name_change(self, trait, _, old_name, new_name):
+    def _on_trait_name_change(self, event):
+        trait = event.object
+        old_name = event.old
+        new_name = event.new
         for tube in self.tubes:
             trait_value = None
             
@@ -418,8 +414,13 @@ class ExperimentDialogModel(HasStrictTraits):
                 self.counter[tube_hash] = 1
                 
                 
-    @on_trait_change('tube_traits:type')
-    def _on_type_change(self, trait, name, old_type, new_type):
+    @observe('tube_traits:items:type')
+    #def _on_type_change(self, trait, name, old_type, new_type):
+    def _on_type_change(self, event):
+        trait = event.object
+        old_type = event.old
+        new_type = event.new
+
         if not trait.name:
             return
                 
@@ -519,7 +520,7 @@ class ExperimentDialogHandler(Controller):
     
     
     # bits for model initialization
-    import_op = Instance('cytoflowgui.op_plugins.import_op.ImportPluginOp')
+    import_op = Instance('cytoflowgui.workflow.operations.import_op.ImportWorkflowOp')
         
     # events
     add_tubes = Event
@@ -642,13 +643,13 @@ class ExperimentDialogHandler(Controller):
             self.model.update_import_op(self.import_op)
         
             
-    @on_trait_change('add_variable')
-    def _on_add_variable(self):
+    @observe('add_variable')
+    def _on_add_variable(self, _):
         self.model.tube_traits.append(TubeTrait(model = self.model))
         
             
-    @on_trait_change('import_csv')
-    def _on_import(self):
+    @observe('import_csv')
+    def _on_import(self, _):
         """
         Import format: CSV, first column is filename, path relative to CSV.
         others are conditions, type is autodetected.  first row is header
@@ -662,7 +663,12 @@ class ExperimentDialogHandler(Controller):
         if file_dialog.return_code != PyfaceOK:
             return
         
-        csv = pandas.read_csv(file_dialog.path)
+        try:
+            csv = pandas.read_csv(file_dialog.path)
+        except Exception as e:
+            warning(None, "Had trouble reading the CSV file: {}".format(str(e)))
+            return
+            
         csv_folder = Path(file_dialog.path).parent
         
         if self.model.tubes or self.model.tube_traits:
@@ -672,21 +678,36 @@ class ExperimentDialogHandler(Controller):
                        title = "Clear tubes and conditions?") != YES:
                 return
         
-        
         for col in csv.columns[1:]:
             self.model.tube_traits.append(TubeTrait(model = self.model,
                                                     name = util.sanitize_identifier(col),
                                                     type = 'category'))
             
-            
-        for _, row in csv.iterrows():
-            filename = csv_folder / row[0]
+        for i, row in csv.iterrows():
+            try:
+                filename = csv_folder / row[0]
+            except Exception as e:
+                warning(None, "Had trouble parsing row {}\n{}\nIs your CSV file formatted correctly?".format(i+2, str(e)))
+                return
             
             try:
                 metadata, _ = parse_tube(str(filename), metadata_only = True)
             except Exception as e:
                 warning(None, "Had trouble loading file {}: {}".format(filename, str(e)))
-                continue
+                return
+            
+            # if we're the first tube loaded, create a dummy experiment
+            # and setup default metadata columns
+            if not self.model.dummy_experiment:
+                self.model.dummy_experiment = \
+                    ImportOp(tubes = [CytoflowTube(file = filename)]).apply(metadata_only = True)
+                                                       
+            # check the next tube against the dummy experiment
+            try:
+                check_tube(filename, self.model.dummy_experiment)
+            except util.CytoflowError as e:
+                error(None, e.__str__(), "Error importing tube")
+                return
 
             metadata['CF_File'] = Path(filename).stem
             new_tube = Tube(file = str(filename), parent = self.model, metadata = sanitize_metadata(metadata))
@@ -694,11 +715,9 @@ class ExperimentDialogHandler(Controller):
 
             for col in csv.columns[1:]:
                 new_tube.trait_set(**{util.sanitize_identifier(col) : row[col]})
-            
-        
-        
-    @on_trait_change('add_tubes')
-    def _on_add_tubes(self):
+                
+    @observe('add_tubes')
+    def _on_add_tubes(self, _):
         """
         Handle "Add tubes..." button.  Add tubes to the experiment.
         """
@@ -716,7 +735,7 @@ class ExperimentDialogHandler(Controller):
                 metadata, _ = parse_tube(path, metadata_only = True)
             except Exception as e:
                 raise RuntimeError("FCS reader threw an error on tube {0}: {1}"\
-                                   .format(path, e.value))
+                                   .format(path, str(e)))
                 
             # if we're the first tube loaded, create a dummy experiment
             # and setup default metadata columns
@@ -728,7 +747,7 @@ class ExperimentDialogHandler(Controller):
             try:
                 check_tube(path, self.model.dummy_experiment)
             except util.CytoflowError as e:
-                error(None, e.__str__(), "Error importing tube")
+                error(None, str(e), "Error importing tube")
                 return
             
             metadata['CF_File'] = Path(path).stem    
@@ -741,20 +760,21 @@ class ExperimentDialogHandler(Controller):
                     tube.on_trait_change(self._try_multiedit, trait.name)
          
             
-    @on_trait_change('remove_tubes')
-    def _on_remove_tubes(self):
+    @observe('remove_tubes')
+    def _on_remove_tubes(self, _):
         conf = confirm(None,
                        "Are you sure you want to remove the selected tube(s)?",
                        "Remove tubes?")
         if conf == YES:
             for tube in self.selected_tubes:
                 self.model.tubes.remove(tube)
+            self.selected_tubes = []
                 
         if not self.model.tubes:
             self.model.dummy_experiment = None
 
                 
-    @on_trait_change('model:tube_traits_items', post_init = True)
+    @observe('model:tube_traits:items', post_init = True)
     def _tube_traits_changed(self, event):
         for trait in event.added:
             if not trait.name:
@@ -779,8 +799,13 @@ class ExperimentDialogHandler(Controller):
                     tube.on_trait_change(self._try_multiedit, trait.name, remove = True)
                     
                     
-    @on_trait_change('model:tube_traits:name')
-    def _tube_trait_name_changed(self, trait, _, old_name, new_name):
+    @observe('model:tube_traits:items:name')
+    def _tube_trait_name_changed(self, event):
+    #def _tube_trait_name_changed(self, trait, _, old_name, new_name):
+        trait = event.object
+        old_name = event.old
+        new_name = event.new
+        
         if old_name:
             old_table_column = next((x for x in self.table_editor.columns if x.name == old_name))
             column_idx = self.table_editor.columns.index(old_table_column)
@@ -815,8 +840,13 @@ class ExperimentDialogHandler(Controller):
             else:
                 self.model.counter[tube_hash] = 1
                 
-    @on_trait_change('model:tube_traits:type')
-    def _tube_trait_type_changed(self, trait, _, old_type, new_type):
+    @observe('model:tube_traits:items:type')
+    def _tube_trait_type_changed(self, event):
+    #def _tube_trait_type_changed(self, trait, _, old_type, new_type):
+        trait = event.object
+        old_type = event.old
+        new_type = event.new
+        
         if not trait.name:
             return
         

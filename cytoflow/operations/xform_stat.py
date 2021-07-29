@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ from warnings import warn
 import pandas as pd
 import numpy as np 
 
-from traits.api import (HasStrictTraits, Str, List, Constant, provides, CStr,
+from traits.api import (HasStrictTraits, Str, List, Constant, provides,
                         Callable, Tuple, Any)
 
 import cytoflow.utility as util
@@ -96,7 +96,7 @@ class TransformStatisticOp(HasStrictTraits):
     id = Constant('edu.mit.synbio.cytoflow.operations.transform_statistic')
     friendly_id = Constant("Transform Statistic")
 
-    name = CStr
+    name = Str
     statistic = Tuple(Str, Str)
     function = Callable
     statistic_name = Str
@@ -231,7 +231,7 @@ class TransformStatisticOp(HasStrictTraits):
         # sort the index, for performance
         new_stat = new_stat.sort_index()
         
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = False)
         new_experiment.history.append(self.clone_traits(transient = lambda t: True))
         if self.statistic_name:
             new_experiment.statistics[(self.name, self.statistic_name)] = new_stat

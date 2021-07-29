@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ cytoflow.utility.log_scale
 --------------------------
 '''
 
-from traits.api import (Instance, Str, Dict, provides, Constant, Enum, Float, 
+from traits.api import (Instance, Str, provides, Constant, Enum, Float, 
                         Property, Tuple, Array) 
                        
 import numpy as np

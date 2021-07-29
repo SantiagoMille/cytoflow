@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -137,7 +137,6 @@ class ColorTranslationOp(HasStrictTraits):
     
     name = Constant("Color Translation")
 
-    translation = util.Removed(err_string = "'translation' is removed; the same info is found in 'controls'", warning = True)
     controls = Dict(Tuple(Str, Str), File)
     mixture_model = Bool(False)
     linear_model = Bool(False)
@@ -187,6 +186,7 @@ class ColorTranslationOp(HasStrictTraits):
         tubes = {}
         
         translation = {x[0] : x[1] for x in list(self.controls.keys())}
+        coefficients = {}
         
         for from_channel, to_channel in translation.items():
             
@@ -304,9 +304,11 @@ class ColorTranslationOp(HasStrictTraits):
                  
                  
             opt = scipy.optimize.least_squares(f, x0)
-            self._coefficients[(from_channel, to_channel)] = opt.x
+            coefficients[(from_channel, to_channel)] = opt.x
             self._trans_fn[(from_channel, to_channel)] = lambda data, x = opt.x: trans_fn(data, x)
 
+        # set atomically to support GUI
+        self._coefficients = coefficients
 
     def apply(self, experiment):
         """Applies the color translation to an experiment
@@ -349,7 +351,7 @@ class ColorTranslationOp(HasStrictTraits):
                                            "{} --> {}.  Did you call estimate()?"
                                            .format(key, val))
                        
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = True)
         
         for channel in from_channels:
             new_experiment.data = \

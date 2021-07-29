@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,14 +25,12 @@ Created on Jan 4, 2018
 import os, unittest, tempfile
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.workflow_item import WorkflowItem
 from cytoflowgui.tests.test_base import ImportedDataTest
-from cytoflowgui.op_plugins import PolygonPlugin
-from cytoflowgui.serialization import load_yaml, save_yaml
-from cytoflowgui.subset import CategorySubset, RangeSubset
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import PolygonWorkflowOp, PolygonSelectionView
+from cytoflowgui.workflow.views import ScatterplotPlotParams
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
+from cytoflowgui.workflow.subset import CategorySubset, RangeSubset
 
 
 class TestPolygon(ImportedDataTest):
@@ -40,8 +38,11 @@ class TestPolygon(ImportedDataTest):
     def setUp(self):
         super().setUp()
 
-        plugin = PolygonPlugin()
-        self.op = op = plugin.get_operation()
+        self.addTypeEqualityFunc(PolygonWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(PolygonSelectionView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ScatterplotPlotParams, 'assertHasTraitsEqual')
+
+        self.op = op = PolygonWorkflowOp()
         op.name = "Poly"
         op.xchannel = "Y2-A"
         op.xscale = "logicle"
@@ -58,7 +59,7 @@ class TestPolygon(ImportedDataTest):
                                     status = 'waiting',
                                     view_error = "Not yet plotted")
 
-        self.view = view = wi.default_view = op.default_view()
+        self.view = view = wi.default_view
         view.subset_list.append(CategorySubset(name = "Well", values = ["A", "B"]))
         wi.view_error = "Not yet plotted"
         wi.views.append(self.wi.default_view)
@@ -80,7 +81,7 @@ class TestPolygon(ImportedDataTest):
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
 
         self.workflow.wi_sync(self.wi, 'status', 'waiting')
-        self.workflow.remote_exec("self.workflow[-1].default_view.vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
+        self.workflow.remote_exec("self.workflow[-1].default_view._vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
         self.workflow.wi_waitfor(self.wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))
 
@@ -90,7 +91,7 @@ class TestPolygon(ImportedDataTest):
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
 
         self.workflow.wi_sync(self.wi, 'status', 'waiting')
-        self.workflow.remote_exec("self.workflow[-1].default_view.vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
+        self.workflow.remote_exec("self.workflow[-1].default_view._vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
         self.workflow.wi_waitfor(self.wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))
 
@@ -101,7 +102,7 @@ class TestPolygon(ImportedDataTest):
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
 
         self.workflow.wi_sync(self.wi, 'status', 'waiting')
-        self.workflow.remote_exec("self.workflow[-1].default_view.vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
+        self.workflow.remote_exec("self.workflow[-1].default_view._vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
         self.workflow.wi_waitfor(self.wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))
 
@@ -111,7 +112,7 @@ class TestPolygon(ImportedDataTest):
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
 
         self.workflow.wi_sync(self.wi, 'status', 'waiting')
-        self.workflow.remote_exec("self.workflow[-1].default_view.vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
+        self.workflow.remote_exec("self.workflow[-1].default_view._vertices = [(23.411982294776319, 5158.7027015021222), (102.22182270573683, 23124.0588433874530), (510.94519955277201, 23124.0588433874530), (1089.5215641232173, 3800.3424832180476), (340.56382570202402, 801.98947404942271), (65.42597937575897, 1119.3133482602157)]")
         self.workflow.wi_waitfor(self.wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))
  
@@ -148,14 +149,30 @@ class TestPolygon(ImportedDataTest):
              
         self.maxDiff = None
                       
-        self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                             new_op.trait_get(self.op.copyable_trait_names()))
-         
-         
+        self.assertEqual(self.op, new_op,)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                                     
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
          
         exec(code)
         nb_data = locals()['ex_3'].data

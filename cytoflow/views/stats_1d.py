@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -87,13 +87,6 @@ class Stats1DView(Base1DStatisticsView):
     # traits   
     id = Constant("edu.mit.synbio.cytoflow.view.stats1d")
     friendly_id = Constant("1D Statistics View")
-    
-    REMOVED_ERROR = Constant("Statistics changed dramatically in 0.5; please see the documentation")
-    by = util.Removed(err_string = REMOVED_ERROR)
-    yfunction = util.Removed(err_string = REMOVED_ERROR)
-    ychannel = util.Removed(err_string = REMOVED_ERROR)
-    xvariable = util.Deprecated(new = "variable")
-    xscale = util.Deprecated(new = 'variable_scale')
     
     variable_scale = util.ScaleEnum
     

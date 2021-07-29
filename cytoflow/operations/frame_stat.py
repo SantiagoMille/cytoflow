@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ import pandas as pd
 import numpy as np
 
 from traits.api import (HasStrictTraits, Str, List, Constant, provides, 
-                        Callable, CStr, Any)
+                        Callable, Any)
 
 import cytoflow.utility as util
 
@@ -91,7 +91,7 @@ class FrameStatisticOp(HasStrictTraits):
     id = Constant('edu.mit.synbio.cytoflow.operations.statistics')
     friendly_id = Constant("Statistics")
     
-    name = CStr
+    name = Str
     function = Callable
     statistic_name = Str
     by = List(Str)
@@ -130,7 +130,7 @@ class FrameStatisticOp(HasStrictTraits):
                                        "{} is already in the experiment's statistics"
                                        .format(stat_name))
                     
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = False)
 
         if self.subset:
             try:

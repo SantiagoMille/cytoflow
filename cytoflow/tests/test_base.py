@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -171,7 +171,8 @@ class View1DTestBase(ImportedData):
 
     def testTitle(self):
         self.view.plot(self.ex, title = "Title")
-        self.assertEqual(plt.gca().get_title(), "Title")
+        self.assertEqual(plt.gcf()._suptitle.get_text(), "Title")
+
 
     def testXlabel(self):
         self.view.plot(self.ex, xlabel = "X lab")

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,37 +24,35 @@ Created on Jan 4, 2018
 '''
 import unittest, tempfile, os
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.tests.test_base import ImportedDataTest, BaseDataViewTest, params_traits_comparator
-from cytoflowgui.view_plugins.parallel_coords import ParallelCoordinatesPlugin, _Channel, ParallelCoordinatesPlotParams
-from cytoflowgui.serialization import save_yaml, load_yaml
+from cytoflowgui.tests.test_base import ImportedDataTest, BaseDataViewTest
+from cytoflowgui.workflow.views import ParallelCoordinatesWorkflowView, ParallelCoordinatesPlotParams, ParallelCoordinatesChannel as Channel
+from cytoflowgui.workflow.serialization import save_yaml, load_yaml
 
 class TestParallelCoords(ImportedDataTest, BaseDataViewTest):
 
     def setUp(self):
         super().setUp()
+        
+        self.addTypeEqualityFunc(ParallelCoordinatesWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ParallelCoordinatesPlotParams, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(Channel, 'assertHasTraitsEqual')
+
 
         self.wi = wi = self.workflow.workflow[-1]
-        self.wi.operation.events = 500
-        self.wi.operation.do_estimate = True
         
-        plugin = ParallelCoordinatesPlugin()
-        self.view = view = plugin.get_view()
+        self.view = view = ParallelCoordinatesWorkflowView()
         
-        view.channels_list = [_Channel(channel = "B1-A", scale = "log"),
-                              _Channel(channel = "V2-A", scale = "log"),
-                              _Channel(channel = "Y2-A", scale = "log")]
+        view.channels_list = [Channel(channel = "B1-A", scale = "log"),
+                              Channel(channel = "V2-A", scale = "log"),
+                              Channel(channel = "Y2-A", scale = "log")]
 
         wi.views.append(view)
         wi.current_view = view
         self.workflow.selected = self.wi
         
         super().setUpView()
-        
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
-                
+                        
     def testBase(self):
         pass
 
@@ -70,12 +68,12 @@ class TestParallelCoords(ImportedDataTest, BaseDataViewTest):
         
     def testAddChannel(self):
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
-        self.view.channels_list.append(_Channel(channel = "FSC-A", scale = "log"))
+        self.view.channels_list.append(Channel(channel = "FSC-A", scale = "log"))
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
     def testRemoveChannel(self):
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
-        self.view.channels_list.append(_Channel(channel = "FSC-A", scale = "log"))
+        self.view.channels_list.append(Channel(channel = "FSC-A", scale = "log"))
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
@@ -98,27 +96,38 @@ class TestParallelCoords(ImportedDataTest, BaseDataViewTest):
             
             for view in wi.views:
                 code = code + view.get_notebook_code(i)
-         
+                  
         exec(code)
 
     def testSerialize(self):
-        with params_traits_comparator(_Channel), \
-                params_traits_comparator(ParallelCoordinatesPlotParams):
-            fh, filename = tempfile.mkstemp()
-            try:
-                os.close(fh)
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
 
-                save_yaml(self.view, filename)
-                new_view = load_yaml(filename)
-            finally:
-                os.unlink(filename)
+            save_yaml(self.view, filename)
+            new_view = load_yaml(filename)
+        finally:
+            os.unlink(filename)
 
-            self.maxDiff = None
+        self.maxDiff = None
 
-            self.assertDictEqual(self.view.trait_get(self.view.copyable_trait_names()),
-                                 new_view.trait_get(self.view.copyable_trait_names()))
-
-
+        self.assertEqual(self.view, new_view)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                
 if __name__ == "__main__":
 #     import sys;sys.argv = ['', 'TestParallelCoords.testPlotArgs']
     unittest.main()

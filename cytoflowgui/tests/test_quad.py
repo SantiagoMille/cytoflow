@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,14 +25,12 @@ Created on Jan 4, 2018
 import os, unittest, tempfile
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.workflow_item import WorkflowItem
 from cytoflowgui.tests.test_base import ImportedDataTest
-from cytoflowgui.op_plugins import QuadPlugin
-from cytoflowgui.serialization import load_yaml, save_yaml
-from cytoflowgui.subset import CategorySubset
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import QuadWorkflowOp, QuadSelectionView
+from cytoflowgui.workflow.views import ScatterplotPlotParams
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
+from cytoflowgui.workflow.subset import CategorySubset
 
 
 class TestQuad(ImportedDataTest):
@@ -40,8 +38,11 @@ class TestQuad(ImportedDataTest):
     def setUp(self):
         super().setUp()
 
-        plugin = QuadPlugin()
-        self.op = op = plugin.get_operation()
+        self.addTypeEqualityFunc(QuadWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(QuadSelectionView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(ScatterplotPlotParams, 'assertHasTraitsEqual')
+
+        self.op = op = QuadWorkflowOp()
         op.name = "Quad"
         op.xchannel = "Y2-A"
         op.xthreshold = 100
@@ -50,7 +51,7 @@ class TestQuad(ImportedDataTest):
         
         self.wi = wi = WorkflowItem(operation = op)
 
-        self.view = view = wi.default_view = op.default_view()
+        self.view = view = wi.default_view
         view.subset_list.append(CategorySubset(name = "Well", values = ["A", "B"]))
 
         wi.view_error = "Not yet plotted"
@@ -113,14 +114,30 @@ class TestQuad(ImportedDataTest):
              
         self.maxDiff = None
                       
-        self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                             new_op.trait_get(self.op.copyable_trait_names()))
-         
-         
+        self.assertEqual(self.op, new_op)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                                     
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
          
         exec(code)
         nb_data = locals()['ex_3'].data

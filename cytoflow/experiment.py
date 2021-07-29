@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -204,7 +204,7 @@ class Experiment(HasStrictTraits):
         
         Parameters
         ----------
-        conditions : Str or Tuple(Str)
+        conditions : Str or List(Str)
             A condition or list of conditions
             
         values : Any or Tuple(Any)
@@ -216,8 +216,16 @@ class Experiment(HasStrictTraits):
             A new :class:`Experiment` containing only the events specified in 
             ``conditions`` and ``values``.
             
+            
+        .. note:: This is a wrapper around :meth:`pandas.DataFrame.groupby` and
+                  :meth:`pandas.core.groupby.GroupBy.get_group`.  That means
+                  you can pass other things in `conditions` -- see 
+                  the :meth:`pandas.DataFrame.groupby` documentation
+                  for details.
+            
         """
-
+        conditions = list(conditions)
+        
         if isinstance(conditions, str):
             c = conditions
             v = values
@@ -234,7 +242,7 @@ class Experiment(HasStrictTraits):
 
         g = self.data.groupby(conditions)
 
-        ret = self.clone()
+        ret = self.clone(deep = False)
         ret.data = g.get_group(values)
         ret.data.reset_index(drop = True, inplace = True)
         
@@ -277,7 +285,7 @@ class Experiment(HasStrictTraits):
             else:
                 resolvers[new_name] = col
                 
-        ret = self.clone()
+        ret = self.clone(deep = False)
         ret.data = self.data.query(expr, resolvers = ({}, resolvers), **kwargs)
         ret.data.reset_index(drop = True, inplace = True)
         
@@ -286,16 +294,24 @@ class Experiment(HasStrictTraits):
         
         return ret
     
-    def clone(self):
+    def clone(self, deep = True):
         """
-        Create a copy of this :class:`Experiment.` :attr:`metadata` and 
-        :attr:`statistics` are deep copies; :attr:`history` is a shallow copy; and
-        .....
-          
+        Create a copy of this :class:`Experiment.` :attr:`metadata`, 
+        :attr:`statistics` and :attr:`history` are deep copies; whether
+        or not :attr:`data` is a deep copy depends on the value of
+        the `deep` parameter.
+        
+        .. warning:: The intent is that `deep` is set to `False` by 
+                     operations that are only adding columns to the 
+                     underlying :class:`pandas.DataFrame`.  This will
+                     improve memory performance.  However, the resulting
+                     :class:`Experiment`s **CANNOT BE MODIFIED IN-PLACE**,
+                     because doing so will affect the other :class:`Experiment`s
+                     that are clones of the one being modified.
         """
         
         new_exp = self.clone_traits()
-        new_exp.data = self.data.copy(deep = True)
+        new_exp.data = self.data.copy(deep = deep)
 
         return new_exp
             
@@ -433,7 +449,9 @@ class Experiment(HasStrictTraits):
         
     def add_events(self, data, conditions):
         """
-        Add new events to this :class:`Experiment`.
+        Add new events to this :class:`Experiment`.  :meth:`add_events` 
+        operates **in place**, modifying the :class:`Experiment` object
+        that it's called on.
         
         Each new event in ``data`` is appended to :attr:`data`, and its 
         per-event metadata columns will be set with the values specified in 

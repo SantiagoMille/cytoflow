@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -119,7 +119,7 @@ class ThresholdOp(HasStrictTraits):
     
     name = Str
     channel = Str
-    threshold = Float
+    threshold = Float(None)
     
     _selection_view = Instance('ThresholdSelection', transient = True)
         
@@ -165,10 +165,14 @@ class ThresholdOp(HasStrictTraits):
             raise util.CytoflowOpError('channel',
                                        "{0} isn't a channel in the experiment"
                                        .format(self.channel))
+            
+        if self.threshold is None:
+            raise util.CytoflowOpError('threshold',
+                                       "must set 'threshold'")
 
         gate = pd.Series(experiment[self.channel] > self.threshold)
 
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = False)
         new_experiment.add_condition(self.name, "bool", gate)
         new_experiment.history.append(self.clone_traits(transient = lambda t: True))
         return new_experiment

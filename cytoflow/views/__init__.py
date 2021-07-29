@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,9 +25,6 @@ import seaborn as sns
 # these settings can be overridden in the GUI
 sns.set(context = "paper", style = "whitegrid", 
         rc = {"xtick.bottom": True, "ytick.left": True})
-
-# the default marker scales are tiny!  make them less tiny
-mpl.rc('legend', markerscale = 4)
 
 from .i_view import IView
 from .i_selectionview import ISelectionView

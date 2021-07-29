@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -219,8 +219,7 @@ class ImportOp(HasStrictTraits):
     data_set = Int(0)
 
     # are we subsetting?
-    events = util.CIntOrNone(None)
-    coarse_events = util.Deprecated(new = 'events')
+    events = Int(None)
         
     # DON'T DO THIS
     ignore_v = List(Str)
@@ -270,6 +269,10 @@ class ImportOp(HasStrictTraits):
         # python identifiers
         if self.channels:
             for old_name, new_name in self.channels.items():
+                if not new_name:
+                    raise util.CytoflowOpError('channels',
+                                               'Can\'t leave the new name for {} empty'
+                                               .format(old_name))
                 if old_name != new_name and new_name != util.sanitize_identifier(new_name):
                     raise util.CytoflowOpError('channels',
                                                "Channel name {} must be a "
@@ -370,7 +373,7 @@ class ImportOp(HasStrictTraits):
                                                   experiment, 
                                                   data_set = self.data_set)
     
-                if self.events:
+                if self.events is not None:
                     if self.events <= len(tube_data):
                         tube_data = tube_data.loc[np.random.choice(tube_data.index,
                                                                    self.events,
@@ -405,9 +408,6 @@ class ImportOp(HasStrictTraits):
             tube_meta['CF_File'] = Path(tube.file).stem
                              
             experiment.metadata['fcs_metadata'][tube.file] = tube_meta
-                 
-#         import sys;sys.path.append(r'/home/brian/.p2/pool/plugins/org.python.pydev_6.1.0.201711051306/pysrc')
-#         import pydevd;pydevd.settrace()
                         
         for channel in channels:
             if self.channels and channel in self.channels:
@@ -425,9 +425,12 @@ class ImportOp(HasStrictTraits):
             if tube0_meta['$DATATYPE'] == 'I':
                 data_bits  = int(meta_channels.loc[channel]['$PnB'])
                 data_range = float(meta_channels.loc[channel]['$PnR'])
-                range_bits = int(math.log(data_range, 2))
+                range_bits = int(math.ceil(math.log(data_range, 2)))
                 
                 if range_bits < data_bits:
+                    warnings.warn('The data range $PnR doesn\'t match the data bits $PnB for channel {}, masking out {} bits'
+                                  .format(channel, data_bits - range_bits),
+                                  util.CytoflowWarning)
                     mask = 1
                     for _ in range(1, range_bits):
                         mask = mask << 1 | 1
@@ -476,7 +479,7 @@ def check_tube(filename, experiment, data_set = 0):
     
     # first make sure the tube has the right channels    
     if not set([experiment.metadata[c]["fcs_name"] for c in experiment.channels]) <= set(tube_meta["_channel_names_"]):
-        raise util.CytoflowError("Tube {0} doesn't have the same channels"
+        raise util.CytoflowError("Tube {0} doesn't have the same channels as the rest of the experiment"
                                  .format(filename))
      
     tube_channels = tube_meta["_channels_"]
@@ -496,7 +499,7 @@ def check_tube(filename, experiment, data_set = 0):
             new_v = tube_channels.loc[fcs_name]['$PnV']
             
             if old_v != new_v and not channel in ignore_v:
-                raise util.CytoflowError("Tube {0} doesn't have the same voltages"
+                raise util.CytoflowError("Tube {0} doesn't have the same voltages as the rest of the experiment"
                                     .format(filename))
 
         # TODO check the delay -- and any other params?

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -122,9 +122,8 @@ class ScatterplotView(Base2DView):
     
     def _update_legend(self, legend):
         for lh in legend.legendHandles:
-            lh.set_facecolor(lh.get_facecolor())  # i don't know why
-            lh.set_edgecolor(lh.get_edgecolor())  # these are needed
             lh.set_alpha(0.5)
+            lh.set_sizes([10.0])
     
 util.expand_class_attributes(ScatterplotView)
 util.expand_method_parameters(ScatterplotView, ScatterplotView.plot)

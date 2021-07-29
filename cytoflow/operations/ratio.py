@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -87,6 +87,11 @@ class RatioOp(HasStrictTraits):
         if experiment is None:
             raise util.CytoflowOpError('experiment',
                                        "No experiment specified")
+            
+        # make sure name got set!
+        if not self.name:
+            raise util.CytoflowOpError('name',
+                                       "Must specify a name for the derived channel")
         
         if self.numerator not in experiment.channels:
             raise util.CytoflowOpError('numerator',
@@ -108,7 +113,7 @@ class RatioOp(HasStrictTraits):
                                        "New channel {0} is already in the experiment"
                                        .format(self.name))
 
-        new_experiment = experiment.clone()
+        new_experiment = experiment.clone(deep = False)
         new_experiment.add_channel(self.name, 
                                    experiment[self.numerator] / experiment[self.denominator])
         new_experiment.data.replace([np.inf, -np.inf], np.nan, inplace = True)

@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,31 +24,31 @@ Created on Jan 5, 2018
 '''
 
 import os, unittest, tempfile
-
-import matplotlib
-matplotlib.use("Agg")
 import pandas as pd
 
-from cytoflowgui.workflow_item import WorkflowItem
-from cytoflowgui.tests.test_base import TasbeTest, params_traits_comparator
-from cytoflowgui.op_plugins import TasbePlugin
-from cytoflowgui.op_plugins.tasbe import _BleedthroughControl, _TranslationControl
-from cytoflowgui.subset import BoolSubset
-from cytoflowgui.serialization import load_yaml, save_yaml
+from cytoflowgui.tests.test_base import TasbeTest
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations.tasbe import TasbeWorkflowOp, TasbeWorkflowView, BleedthroughControl, TranslationControl, BeadUnit
+from cytoflowgui.workflow.subset import BoolSubset
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
 
 class TestTASBE(TasbeTest):
     
     def setUp(self):
         super().setUp()      
-        
-        plugin = TasbePlugin()
-        self.op = op = plugin.get_operation()        
+
+        self.addTypeEqualityFunc(TasbeWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(TasbeWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(BleedthroughControl, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(TranslationControl, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(BeadUnit, 'assertHasTraitsEqual')
+
+        self.op = op = TasbeWorkflowOp()
         self.cwd = os.path.dirname(os.path.abspath(__file__))
         
         self.wi = wi = WorkflowItem(operation = op,
                                     status = 'waiting',
                                     view_error = "Not yet plotted")
-        wi.default_view = self.op.default_view()
         wi.views.append(self.wi.default_view)
         
         self.workflow.workflow.append(wi)
@@ -58,17 +58,18 @@ class TestTASBE(TasbeTest):
 
         op.blank_file = self.cwd + "/../../cytoflow/tests/data/tasbe/blank.fcs"     
         
-        op.bleedthrough_list = [_BleedthroughControl(channel = "FITC-A",
+        op.bleedthrough_list = [BleedthroughControl(channel = "FITC-A",
                                                      file = self.cwd + "/../../cytoflow/tests/data/tasbe/eyfp.fcs"),
-                                _BleedthroughControl(channel = "Pacific Blue-A",
+                                BleedthroughControl(channel = "Pacific Blue-A",
                                                      file = self.cwd + "/../../cytoflow/tests/data/tasbe/ebfp.fcs"),
-                                _BleedthroughControl(channel = "PE-Tx-Red-YG-A",
+                                BleedthroughControl(channel = "PE-Tx-Red-YG-A",
                                                      file = self.cwd + "/../../cytoflow/tests/data/tasbe/mkate.fcs")]
         
         op.beads_name = "Spherotech RCP-30-5A Lot AG01, AF02, AD04 and AAE01"
         op.beads_file = self.cwd + "/../../cytoflow/tests/data/tasbe/beads.fcs"
         op.beads_unit = "MEFL"
         
+        op.do_color_translation = True
         op.to_channel = "FITC-A"
         
         self.op.translation_list[0].file = self.cwd + "/../../cytoflow/tests/data/tasbe/rby.fcs"
@@ -97,6 +98,36 @@ class TestTASBE(TasbeTest):
         self.workflow.wi_waitfor(self.wi, 'status', 'valid')
         self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))     
 
+    def testChangeChannelsThenPlot(self):
+        self.workflow.wi_sync(self.wi, 'status', 'waiting')
+        self.op.channels = ["FITC-A", "Pacific Blue-A"]
+        self.workflow.wi_waitfor(self.wi, 'status', 'invalid')
+        self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is None"))
+        self.assertTrue(len(self.op.translation_list) == 1)
+        self.assertTrue(len(self.op.bleedthrough_list) == 2)
+
+        self.workflow.wi_sync(self.wi, 'status', 'waiting')
+        self.op.do_estimate = True
+        self.workflow.wi_waitfor(self.wi, 'status', 'valid')
+        self.assertTrue(self.workflow.remote_eval("self.workflow[-1].result is not None"))     
+        
+        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
+        self.wi.current_view = self.wi.default_view
+        self.wi.default_view.current_plot = "Autofluorescence"
+        self.workflow.wi_waitfor(self.wi, 'view_error', '')
+
+        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
+        self.wi.default_view.current_plot = "Bleedthrough"
+        self.workflow.wi_waitfor(self.wi, 'view_error', '')
+
+        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
+        self.wi.default_view.current_plot = "Bead Calibration"
+        self.workflow.wi_waitfor(self.wi, 'view_error', '')
+         
+        self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
+        self.wi.default_view.current_plot = "Color Translation"
+        self.workflow.wi_waitfor(self.wi, 'view_error', '')
+
     def testPlot(self):
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
         self.wi.current_view = self.wi.default_view
@@ -116,26 +147,41 @@ class TestTASBE(TasbeTest):
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
     def testSerialize(self):
-        with params_traits_comparator(_BleedthroughControl), \
-                params_traits_comparator(_TranslationControl):
-            fh, filename = tempfile.mkstemp()
-            try:
-                os.close(fh)
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
 
-                save_yaml(self.op, filename)
-                new_op = load_yaml(filename)
-            finally:
-                os.unlink(filename)
+            save_yaml(self.op, filename)
+            new_op = load_yaml(filename)
+        finally:
+            os.unlink(filename)
 
-            self.maxDiff = None
+        self.maxDiff = None
 
-            self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                                 new_op.trait_get(self.op.copyable_trait_names()))
-
+        self.assertEqual(self.op, new_op)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                                     
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
         
         exec(code)
 

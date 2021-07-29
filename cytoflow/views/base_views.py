@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -109,6 +109,12 @@ class BaseView(HasStrictTraits):
             Which `seaborn` context to use?  Controls the scaling of plot 
             elements such as tick labels and the legend.  Default is `talk`.
             
+        palette : palette name, list, or dict
+            Colors to use for the different levels of the hue variable. 
+            Should be something that can be interpreted by
+            :func:`seaborn.color_palette`, or a dictionary mapping hue levels to 
+            matplotlib colors.
+            
         despine : Bool
             Remove the top and right axes from the plot?  Default is `True`.
 
@@ -143,9 +149,10 @@ class BaseView(HasStrictTraits):
                                          "col_wrap must be None or > 1")
         
         title = kwargs.pop("title", None)
-        xlabel = kwargs.pop("xlabel", None)
+        xlabel = kwargs.pop("xlabel", None)       
         ylabel = kwargs.pop("ylabel", None)
         huelabel = kwargs.pop("huelabel", self.huefacet)
+        if huelabel == "": huelabel = self.huefacet
         
         sharex = kwargs.pop("sharex", True)
         sharey = kwargs.pop("sharey", True)
@@ -156,6 +163,7 @@ class BaseView(HasStrictTraits):
         legend = kwargs.pop('legend', True)
 
         despine = kwargs.pop('despine', False)
+        palette = kwargs.pop('palette', None)
                
         if cytoflow.RUNNING_IN_GUI:
             sns_style = kwargs.pop('sns_style', 'whitegrid')
@@ -189,7 +197,9 @@ class BaseView(HasStrictTraits):
                           col_wrap = col_wrap,
                           legend_out = False,
                           sharex = sharex,
-                          sharey = sharey)
+                          sharey = sharey,
+                          despine = despine,
+                          palette = palette)
         
         plot_ret = self._grid_plot(experiment = experiment, grid = g, **kwargs)
         
@@ -283,7 +293,7 @@ class BaseView(HasStrictTraits):
                     self._update_legend(legend)
                         
         if title:
-            plt.title(title)
+            plt.suptitle(title)
             
         if xlabel == "":
             xlabel = None
@@ -292,13 +302,7 @@ class BaseView(HasStrictTraits):
             ylabel = None
             
         g.set_axis_labels(xlabel, ylabel)
- 
-        sns.despine(top = despine, 
-                    right = despine,
-                    bottom = False,
-                    left = False)
-                    
-                    
+      
     def _grid_plot(self, experiment, grid, xlim, ylim, xscale, yscale, **kwargs):
         raise NotImplementedError("You must override _grid_plot in a derived class")
     
@@ -308,6 +312,12 @@ class BaseView(HasStrictTraits):
 class BaseDataView(BaseView):
     """
     The base class for data views (as opposed to statistics views).
+    
+    Attributes
+    ----------
+    subset : str
+        An expression that specifies the subset of the statistic to plot.
+        Passed unmodified to :meth:`pandas.DataFrame.query`.
     """
 
     subset = Str
@@ -581,6 +591,10 @@ class BaseNDView(BaseDataView):
         if len(self.channels) == 0:
             raise util.CytoflowOpError('channels',
                                        "Must set at least one channel")
+            
+        if len(self.channels) != len(set(self.channels)):
+            raise util.CytoflowOpError('channels', 
+                                       "Must not duplicate channels")
 
         for c in self.channels:
             if c not in experiment.data:
@@ -617,7 +631,7 @@ class BaseNDView(BaseDataView):
 @provides(IView)
 class BaseStatisticsView(BaseView):
     """
-    The base class for statisticxs views (as opposed to data views).
+    The base class for statistics views (as opposed to data views).
     
     Attributes
     ----------
@@ -627,11 +641,9 @@ class BaseStatisticsView(BaseView):
         
     subset : str
         An expression that specifies the subset of the statistic to plot.
+        Passed unmodified to :meth:`pandas.DataFrame.query`.
 
     """
-    
-    # deprecated or removed attributes give warnings & errors, respectively
-    by = util.Deprecated(new = 'variable', err_string = "'by' is deprecated, please use 'variable'")
     
     variable = Str
     subset = Str
@@ -639,6 +651,13 @@ class BaseStatisticsView(BaseView):
     def enum_plots(self, experiment, data):
         """
         Enumerate the named plots we can make from this set of statistics.
+        
+        Returns
+        -------
+        iterator
+            An iterator across the possible plot names. The iterator ALSO has an instance
+            attribute called :attribute::`by`, which holds a list of the facets that are
+            not yet set (and thus need to be specified in the plot name.)
         """
         
         if experiment is None:
@@ -689,6 +708,13 @@ class BaseStatisticsView(BaseView):
         
         This function takes care of checking for facet name validity and 
         subsetting, then passes the dataframe to `BaseView.plot`
+        
+        Parameters
+        ----------
+        plot_name : str
+            If this :class:`IView` can make multiple plots, ``plot_name`` is
+            the name of the plot to make.  Must be one of the values retrieved
+            from :meth:`enum_plots`.
 
         """
         
@@ -812,17 +838,7 @@ class Base1DStatisticsView(BaseStatisticsView):
     scale : {'linear', 'log', 'logicle'}
         The scale applied to the data before plotting it.
     """
-    
-    REMOVED_ERROR = "Statistics changed dramatically in 0.5; please see the documentation"
-    by = util.Removed(err_string = REMOVED_ERROR)
-    yfunction = util.Removed(err_string = REMOVED_ERROR)
-    ychannel = util.Removed(err_string = REMOVED_ERROR)
-    channel = util.Removed(err_string = REMOVED_ERROR)
-    function = util.Removed(err_string = REMOVED_ERROR)
-    error_bars = util.Removed(err_string = REMOVED_ERROR)
-    
-    xvariable = util.Deprecated(new = "variable")
-    
+        
     statistic = Tuple(Str, Str)
     error_statistic = Tuple(Str, Str)
     
@@ -950,13 +966,6 @@ class Base2DStatisticsView(BaseStatisticsView):
     xscale, yscale : {'linear', 'log', 'logicle'}
         The scales applied to the data before plotting it.
     """
-
-    STATS_REMOVED = "{} has been removed. Statistics changed dramatically in 0.5; please see the documentation."
-    
-    xchannel = util.Removed(err_string = STATS_REMOVED)
-    xfunction = util.Removed(err_string = STATS_REMOVED)
-    ychannel = util.Removed(err_string = STATS_REMOVED)
-    yfunction = util.Removed(err_string = STATS_REMOVED)
     
     xstatistic = Tuple(Str, Str)
     ystatistic = Tuple(Str, Str)

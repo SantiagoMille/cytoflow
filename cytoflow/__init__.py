@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,10 +27,7 @@ import warnings
 warnings.filterwarnings('ignore', '.*IPython widgets are experimental.*')
 warnings.filterwarnings('ignore', 'axes.color_cycle is deprecated and replaced with axes.prop_cycle')
 
-# ... and from SciPy (fixed in scipy HEAD, remove when ver > 1.1.1)
-# warnings.filterwarnings('ignore', 'Using a non-tuple sequence for multidimensional indexing is deprecated.*')
-
-# and from matplotlib 3.1.1 -- there's some weird interaction with seaborn here.
+# and matplotlib 3.1.1 -- there's some weird interaction with seaborn here.
 import matplotlib.text
 import logging
 class MplFilter(logging.Filter):
@@ -59,7 +56,6 @@ from .operations.quad import QuadOp
 
 # TASBE
 from .operations.autofluorescence import AutofluorescenceOp
-from .operations.bleedthrough_piecewise import BleedthroughPiecewiseOp
 from .operations.bleedthrough_linear import BleedthroughLinearOp
 from .operations.bead_calibration import BeadCalibrationOp
 from .operations.color_translation import ColorTranslationOp
@@ -67,8 +63,6 @@ from .operations.color_translation import ColorTranslationOp
 # data-driven
 from .operations.ratio import RatioOp
 from .operations.density import DensityGateOp
-from .operations.gaussian_1d import GaussianMixture1DOp
-from .operations.gaussian_2d import GaussianMixture2DOp
 from .operations.gaussian import GaussianMixtureOp
 from .operations.kmeans import KMeansOp
 from .operations.flowpeaks import FlowPeaksOp

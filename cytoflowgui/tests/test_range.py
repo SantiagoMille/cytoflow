@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,21 +25,23 @@ Created on Jan 4, 2018
 import os, unittest, tempfile
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-
-from cytoflowgui.workflow_item import WorkflowItem
 from cytoflowgui.tests.test_base import ImportedDataTest
-from cytoflowgui.op_plugins import RangePlugin
-from cytoflowgui.serialization import load_yaml, save_yaml
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import RangeWorkflowOp, RangeSelectionView
+from cytoflowgui.workflow.views import HistogramPlotParams
+from cytoflowgui.workflow.subset import CategorySubset, RangeSubset
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
 
 class TestRange(ImportedDataTest):
 
     def setUp(self):
         super().setUp()
 
-        plugin = RangePlugin()
-        self.op = op = plugin.get_operation()
+        self.addTypeEqualityFunc(RangeWorkflowOp, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(RangeSelectionView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(HistogramPlotParams, 'assertHasTraitsEqual')
+
+        self.op = op = RangeWorkflowOp()
         op.name = "Range"
         op.channel = "Y2-A"
         op.low = 100
@@ -49,7 +51,7 @@ class TestRange(ImportedDataTest):
                                     status = 'waiting',
                                     view_error = "Not yet plotted")
 
-        self.view = wi.default_view = op.default_view()
+        self.view = wi.default_view
         wi.views.append(self.wi.default_view)
         self.wi.current_view = self.wi.default_view
         
@@ -94,7 +96,6 @@ class TestRange(ImportedDataTest):
         
     def testSubset(self):
         self.workflow.wi_sync(self.wi, 'view_error', 'waiting')
-        from cytoflowgui.subset import CategorySubset, RangeSubset
         self.view.subset_list.append(CategorySubset(name = "Well",
                                                     values = ['A', 'B']))
         self.view.subset_list.append(RangeSubset(name = "Dox",
@@ -116,14 +117,30 @@ class TestRange(ImportedDataTest):
              
         self.maxDiff = None
                       
-        self.assertDictEqual(self.op.trait_get(self.op.copyable_trait_names()),
-                             new_op.trait_get(self.op.copyable_trait_names()))
-         
-         
+        self.assertEqual(self.op, new_op)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                                     
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
          
         exec(code)
         nb_data = locals()['ex_3'].data

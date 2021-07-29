@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,27 +24,25 @@ Created on Jan 5, 2018
 '''
 
 import os, unittest, tempfile
-
-import matplotlib
 import pandas as pd
-matplotlib.use("Agg")
 
-from cytoflowgui.workflow_item import WorkflowItem
-from cytoflowgui.op_plugins import ChannelStatisticPlugin
-from cytoflowgui.view_plugins.table import TablePlugin
-from cytoflowgui.serialization import load_yaml, save_yaml
-from cytoflowgui.view_plugins.i_view_plugin import EmptyPlotParams
+from cytoflowgui.tests.test_base import ImportedDataTest
+from cytoflowgui.workflow.workflow_item import WorkflowItem
+from cytoflowgui.workflow.operations import ChannelStatisticWorkflowOp
+from cytoflowgui.workflow.views.table import TableWorkflowView
+from cytoflowgui.workflow.serialization import load_yaml, save_yaml
+from cytoflowgui.workflow.views.view_base import BasePlotParams
 
-from cytoflowgui.tests.test_base import ImportedDataTest, params_traits_comparator
 
 class TestTable(ImportedDataTest):
     
     def setUp(self):
         super().setUp()
 
-        plugin = ChannelStatisticPlugin()
-        
-        op = plugin.get_operation()
+        self.addTypeEqualityFunc(TableWorkflowView, 'assertHasTraitsEqual')
+        self.addTypeEqualityFunc(BasePlotParams, 'assertHasTraitsEqual')
+
+        op = ChannelStatisticWorkflowOp()
         op.name = "MeanByDox"
         op.channel = "Y2-A"
         op.statistic_name = "Geom.SD"
@@ -55,7 +53,7 @@ class TestTable(ImportedDataTest):
                           view_error = "Not yet plotted")        
         self.workflow.workflow.append(wi)
         
-        op = plugin.get_operation()
+        op = ChannelStatisticWorkflowOp()
         op.name = "MeanByDoxAndWell"
         op.channel = "Y2-A"
         op.statistic_name = "Geom.SD"
@@ -66,7 +64,7 @@ class TestTable(ImportedDataTest):
                           view_error = "Not yet plotted")        
         self.workflow.workflow.append(wi)
         
-        op = plugin.get_operation()
+        op = ChannelStatisticWorkflowOp()
         op.name = "MeanByDox"
         op.channel = "Y2-A"
         op.statistic_name = "Geom.Mean"
@@ -77,7 +75,7 @@ class TestTable(ImportedDataTest):
                           view_error = "Not yet plotted")        
         self.workflow.workflow.append(wi)
         
-        op = plugin.get_operation()
+        op = ChannelStatisticWorkflowOp()
         op.name = "MeanByDoxAndWell"
         op.channel = "Y2-A"
         op.statistic_name = "Geom.Mean"
@@ -92,8 +90,7 @@ class TestTable(ImportedDataTest):
 
         self.workflow.wi_waitfor(wi, 'status', "valid")
         
-        plugin = TablePlugin()
-        self.view = view = plugin.get_view()
+        self.view = view = TableWorkflowView()
         view.statistic = ("MeanByDox", "Geom.Mean")
         view.row_facet = "Dox"
         
@@ -171,30 +168,41 @@ class TestTable(ImportedDataTest):
         self.workflow.wi_waitfor(self.wi, 'view_error', '')
 
     def testSerialize(self):
-        with params_traits_comparator(EmptyPlotParams):
-            fh, filename = tempfile.mkstemp()
-            try:
-                os.close(fh)
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
 
-                save_yaml(self.view, filename)
-                new_view = load_yaml(filename)
-            finally:
-                os.unlink(filename)
+            save_yaml(self.view, filename)
+            new_view = load_yaml(filename)
+        finally:
+            os.unlink(filename)
 
-            self.maxDiff = None
+        self.maxDiff = None
 
-            old_traits = self.view.trait_get(self.view.copyable_trait_names())
-            new_traits = new_view.trait_get(self.view.copyable_trait_names())
-
-            # we don't serialize the result
-            old_traits['result'] = None
-
-            self.assertDictEqual(old_traits, new_traits)
-
+        self.assertEqual(self.view, new_view)
+                      
+    def testSerializeWorkflowItem(self):
+        fh, filename = tempfile.mkstemp()
+        try:
+            os.close(fh)
+             
+            save_yaml(self.wi, filename)
+            new_wi = load_yaml(filename)
+             
+        finally:
+            os.unlink(filename)
+             
+        self.maxDiff = None
+        
+        self.assertEqual(self.wi, new_wi)
+                
     def testNotebook(self):
         code = "from cytoflow import *\n"
         for i, wi in enumerate(self.workflow.workflow):
             code = code + wi.operation.get_notebook_code(i)
+            
+            for view in wi.views:
+                code = code + view.get_notebook_code(i)
            
         exec(code) # smoke test
 

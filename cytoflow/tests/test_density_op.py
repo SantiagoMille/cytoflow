@@ -1,8 +1,8 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3.8
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2019
+# (c) Brian Teague 2018-2021
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,10 +23,9 @@ Created on Dec 1, 2015
 @author: brian
 '''
 import unittest
-import os
 import cytoflow as flow
 import cytoflow.utility as util
-from test_base import ImportedDataSmallTest
+from .test_base import ImportedDataSmallTest
 
 
 class TestDensityGate(ImportedDataSmallTest):
@@ -68,8 +67,8 @@ class TestDensityGate(ImportedDataSmallTest):
         self.gate.estimate(self.ex)
         ex2 = self.gate.apply(self.ex)
         
-        self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[1.0, False], 1886)
-        self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[1.0, True], 8114)
+        self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[1.0, False], 1866)
+        self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[1.0, True], 8134)
         
         self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[10.0, False], 1859)
         self.assertAlmostEqual(ex2.data.groupby(["Dox", "D"]).size().loc[10.0, True], 8141)
@@ -91,5 +90,5 @@ class TestDensityGate(ImportedDataSmallTest):
         self.gate.default_view().plot(self.ex, plot_name = 1.0)        
 
 if __name__ == "__main__":
-#     import sys;sys.argv = ['', 'TestDensityGate.testApplyBy']
+    import sys;sys.argv = ['', 'TestDensityGate.testApplyBy']
     unittest.main()
