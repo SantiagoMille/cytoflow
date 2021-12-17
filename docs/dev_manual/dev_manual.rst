@@ -42,7 +42,10 @@ Contents:
    
    guides/guides
    
+   faq
+   
    api/cytoflow
+   api/cytoflowgui
    
    
    
