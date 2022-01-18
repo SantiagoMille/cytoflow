@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,21 +17,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.polygon
 ---------------------------
-'''
+
+Apply a polygon gate to two channels in an `Experiment`.  
+`polygon` has two classes:
+
+`PolygonOp` -- Applies the gate, given a set of vertices.
+
+`ScatterplotPolygonSelectionView` -- an `IView` that allows you to view the 
+polygon and/or interactively set the vertices on a scatterplot.
+
+`DensityPolygonSelectionView` -- an `IView` that allows you to view the 
+polygon and/or interactively set the vertices on a scatterplot.
+"""
 
 from traits.api import (HasStrictTraits, Str, List, Float, provides,
-                        Instance, Bool, on_trait_change, Any,
+                        Instance, Bool, observe, Any, Dict, 
                         Constant)
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.widgets import PolygonSelector
 import numpy as np
 
 import cytoflow.utility as util
-from cytoflow.views import ISelectionView, ScatterplotView
+from cytoflow.views import ISelectionView, ScatterplotView, DensityView
 
 from .i_operation import IOperation
 from .base_op_views import Op2DView
@@ -45,7 +57,7 @@ class PolygonOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Used to name the new metadata field in the
-        experiment that's created by :meth:`apply`
+        experiment that's created by `apply`
         
     xchannel, ychannel : Str
         The names of the x and y channels to apply the gate.
@@ -59,11 +71,12 @@ class PolygonOp(HasStrictTraits):
         
     Notes
     -----
-    This module uses :meth:`matplotlib.path.Path` to represent the polygon, because
-    membership testing is very fast.
-    
     You can set the verticies by hand, I suppose, but it's much easier to use
-    the interactive view you get from :meth:`default_view` to do so.
+    the interactive view you get from `default_view` to do so.  
+    Set `ScatterplotPolygonSelectionView.interactive` to `True`, then 
+    single-click to set vertices. Click the first vertex a second time to 
+    close the polygon.  You'll need to do this in a Jupyter notebook with
+    ``%matplotlib notebook`` -- see the ``Interactive Plots`` demo for an example.
 
     
     Examples
@@ -105,8 +118,9 @@ class PolygonOp(HasStrictTraits):
         :context: close-figs
             
         >>> df = p.default_view(huefacet = "Dox",
-        ...                    xscale = 'log',
-        ...                    yscale = 'log')
+        ...                     xscale = 'log',
+        ...                     yscale = 'log',
+        ...                     density = True)
         
         >>> df.plot(ex)
         
@@ -115,7 +129,7 @@ class PolygonOp(HasStrictTraits):
        If you want to use the interactive default view in a Jupyter notebook,
        make sure you say ``%matplotlib notebook`` in the first cell 
        (instead of ``%matplotlib inline`` or similar).  Then call 
-       ``default_view()`` with ``interactive = True``::
+       `default_view` with ``interactive = True``::
        
            df = p.default_view(huefacet = "Dox",
                                xscale = 'log',
@@ -135,6 +149,17 @@ class PolygonOp(HasStrictTraits):
         True      4125
         dtype: int64
             
+    You can also get (or draw) the polygon on a density plot instead of a 
+    scatterplot:
+    
+    .. plot::
+        :context: close-figs
+            
+        >>> df = p.default_view(huefacet = "Dox",
+        ...                     xscale = 'log',
+        ...                     yscale = 'log')
+        
+        >>> df.plot(ex)
     """
     
     # traits
@@ -149,7 +174,7 @@ class PolygonOp(HasStrictTraits):
     xscale = util.ScaleEnum()
     yscale = util.ScaleEnum()
     
-    _selection_view = Instance('PolygonSelection', transient = True)
+    _selection_view = Instance('_PolygonSelection', transient = True)
         
     def apply(self, experiment):
         """Applies the threshold to an experiment.
@@ -157,21 +182,21 @@ class PolygonOp(HasStrictTraits):
         Parameters
         ----------
         experiment : Experiment
-            the old :class:`Experiment` to which this op is applied
+            the old `Experiment` to which this op is applied
             
         Returns
         -------
         Experiment
-            a new :class:'Experiment`, the same as ``old_experiment`` but with 
+            a new 'Experiment`, the same as ``experiment`` but with 
             a new column of type `bool` with the same as the operation name.  
             The bool is ``True`` if the event's measurement is within the 
             polygon, and ``False`` otherwise.
             
         Raises
         ------
-        util.CytoflowOpError
+        CytoflowOpError
             if for some reason the operation can't be applied to this
-            experiment. The reason is in :attr:`.CytoflowOpError.args`
+            experiment. The reason is in the ``args`` attribute.
         """
         
         if experiment is None:
@@ -232,53 +257,47 @@ class PolygonOp(HasStrictTraits):
         yscale = util.scale_factory(self.yscale, experiment, channel = self.ychannel)
         
         vertices = [(xscale(x), yscale(y)) for (x, y) in self.vertices]
+        vertices.append(vertices[0])
         data = experiment.data[[self.xchannel, self.ychannel]].copy()
         data[self.xchannel] = xscale(data[self.xchannel])
         data[self.ychannel] = yscale(data[self.ychannel])
-            
-        # use a matplotlib Path because testing for membership is a fast C fn.
-        path = mpl.path.Path(np.array(vertices))
+        
+        # use an extremely fast parallel algorithm to test polygon membership.
+        # this function is better defined for edge cases than matplotlib's
+        # path.contains_points.  and it's faster.
+        # see https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
+        # for a deep dive
         xy_data = data[[self.xchannel, self.ychannel]].values
+        in_polygon = util.polygon_contains(xy_data, np.array(vertices))
         
         new_experiment = experiment.clone(deep = False)        
-        new_experiment.add_condition(self.name, 
-                                     "bool", 
-                                     path.contains_points(xy_data))
+        new_experiment.add_condition(self.name, "bool", in_polygon)
         new_experiment.history.append(self.clone_traits(transient = lambda _: True))
             
         return new_experiment
     
     def default_view(self, **kwargs):
-        self._selection_view = PolygonSelection(op = self)
+        """
+        Returns an `IView` that allows a user to view the polygon or interactively draw it.
+        
+        Parameters
+        ----------
+        
+        density : bool, default = False
+            If `True`, return a density plot instead of a scatterplot.
+        """ 
+        
+        density = kwargs.pop('density', False)
+        if density:
+            self._selection_view = DensityPolygonSelectionView(op = self)
+        else:
+            self._selection_view = ScatterplotPolygonSelectionView(op = self)
+            
         self._selection_view.trait_set(**kwargs)
         return self._selection_view
     
-@provides(ISelectionView)
-class PolygonSelection(Op2DView, ScatterplotView):
-    """
-    Plots, and lets the user interact with, a 2D polygon selection.
     
-    Attributes
-    ----------
-    interactive : bool
-        is this view interactive?  Ie, can the user set the polygon verticies
-        with mouse clicks?
-        
-    Examples
-    --------
-
-    In a Jupyter notebook with `%matplotlib notebook`
-    
-    >>> s = flow.PolygonOp(xchannel = "V2-A",
-    ...                    ychannel = "Y2-A")
-    >>> poly = s.default_view()
-    >>> poly.plot(ex2)
-    >>> poly.interactive = True
-    """
-    
-    id = Constant('edu.mit.synbio.cytoflow.views.polygon')
-    friendly_id = Constant("Polygon Selection")
-    
+class _PolygonSelection(Op2DView):    
     xfacet = Constant(None)
     yfacet = Constant(None)
 
@@ -286,25 +305,29 @@ class PolygonSelection(Op2DView, ScatterplotView):
 
     # internal state.
     _ax = Any(transient = True)
-    _widget = Instance(util.PolygonSelector, transient = True)
+    _widget = Instance(PolygonSelector, transient = True)
     _patch = Instance(mpl.patches.PathPatch, transient = True)
+    _patch_props = Dict()
         
     def plot(self, experiment, **kwargs):
-        """
-        Plot the scatter plot, and then plot the selection on top of it.
         
-        Parameters
-        ----------
+        if experiment is None:
+            raise util.CytoflowViewError('experiment',
+                                         "No experiment specified")
+            
+        self._patch_props = kwargs.pop('patch_props',
+                                        {'edgecolor' : 'black',
+                                         'linewidth' : 2,
+                                         'fill' : False})
         
-        """
-        
-        super(PolygonSelection, self).plot(experiment, **kwargs)
+        super(_PolygonSelection, self).plot(experiment, **kwargs)
         self._ax = plt.gca()
-        self._draw_poly()
-        self._interactive()
+        self._draw_poly(None)
+        self._interactive(None)
     
-    @on_trait_change('op.vertices', post_init = True)
-    def _draw_poly(self):
+
+    @observe('op.vertices', post_init = True)        
+    def _draw_poly(self, _):
         if not self._ax:
             return
          
@@ -316,30 +339,118 @@ class PolygonSelection(Op2DView, ScatterplotView):
              
         patch_vert = np.concatenate((np.array(self.op.vertices), 
                                     np.array((0,0), ndmin = 2)))
-                                    
+        
         self._patch = \
-            mpl.patches.PathPatch(mpl.path.Path(patch_vert, closed = True),
-                                  edgecolor="black",
-                                  linewidth = 2,
-                                  fill = False)
+            mpl.patches.PathPatch(mpl.path.Path(patch_vert, closed = True), **self._patch_props)
             
         self._ax.add_patch(self._patch)
         plt.draw()
     
-    @on_trait_change('interactive', post_init = True)
-    def _interactive(self):
+    @observe('interactive', post_init = True)
+    def _interactive(self, _):
         if self._ax and self.interactive:
-            self._widget = util.PolygonSelector(self._ax,
-                                                self._onselect,
-                                                useblit = True)
+            self._widget = PolygonSelector(self._ax,
+                                           self._onselect,
+                                           useblit = True,
+                                           grab_range = 20)
         elif self._widget:
-            self._widget = None       
-    
+            self._widget.set_active(False) 
+            self._widget = None    
+     
     def _onselect(self, vertices):
         self.op.vertices = vertices
+        self.interactive = False
+  
+
+@provides(ISelectionView)
+class ScatterplotPolygonSelectionView(_PolygonSelection, ScatterplotView):
+    """
+    Plots, and lets the user interact with, a 2D polygon selection on a scatterplot.
     
-util.expand_class_attributes(PolygonSelection)
-util.expand_method_parameters(PolygonSelection, PolygonSelection.plot)        
+    Attributes
+    ----------
+    interactive : bool
+        is this view interactive?  Ie, can the user set the polygon verticies
+        with mouse clicks?
+        
+    Examples
+    --------
+
+    In a Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> s = flow.PolygonOp(xchannel = "V2-A",
+    ...                    ychannel = "Y2-A")
+    >>> poly = s.default_view()
+    >>> poly.plot(ex2)
+    >>> poly.interactive = True
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.polygon')
+    friendly_id = Constant("Polygon Selection")
+    
+    def plot(self, experiment, **kwargs):
+        """
+        Plot the default view, and then draw the selection on top of it.
+        
+        Parameters
+        ----------
+        
+        patch_props : Dict
+           The properties of the `matplotlib.patches.Patch` that are drawn
+           on top of the scatterplot or density view.  They're passed
+           directly to the `matplotlib.patches.Patch` constructor.
+           Default: ``{edgecolor : 'black', linewidth : 2, fill : False}``
+        
+        """
+        super().plot(experiment, **kwargs)
+
+util.expand_class_attributes(ScatterplotPolygonSelectionView)
+util.expand_method_parameters(ScatterplotPolygonSelectionView, ScatterplotPolygonSelectionView.plot) 
+
+@provides(ISelectionView)
+class DensityPolygonSelectionView(_PolygonSelection, DensityView):
+    """
+    Plots, and lets the user interact with, a 2D polygon selection on a density plot.
+    
+    Attributes
+    ----------
+    interactive : bool
+        is this view interactive?  Ie, can the user set the polygon verticies
+        with mouse clicks?
+        
+    Examples
+    --------
+
+    In a Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> s = flow.PolygonOp(xchannel = "V2-A",
+    ...                    ychannel = "Y2-A")
+    >>> poly = s.default_view(density = True)
+    >>> poly.plot(ex2)
+    >>> poly.interactive = True
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.polygon_density')
+    friendly_id = Constant("Polygon Selection")
+    
+    def plot(self, experiment, **kwargs):
+        """
+        Plot the default view, and then draw the selection on top of it.
+        
+        Parameters
+        ----------
+        
+        patch_props : Dict
+           The properties of the `matplotlib.patches.Patch` that are drawn
+           on top of the scatterplot or density view.  They're passed
+           directly to the `matplotlib.patches.Patch` constructor.
+           Default: {edgecolor : 'black', linewidth : 2, fill : False}
+        
+        """
+        super().plot(experiment, **kwargs)
+
+util.expand_class_attributes(DensityPolygonSelectionView)
+util.expand_method_parameters(ScatterplotPolygonSelectionView, ScatterplotPolygonSelectionView.plot) 
         
 if __name__ == '__main__':
     import cytoflow as flow

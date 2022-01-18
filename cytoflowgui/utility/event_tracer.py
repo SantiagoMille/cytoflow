@@ -12,7 +12,11 @@
 #
 #------------------------------------------------------------------------------
 """ 
+cytoflowgui.utility.event_tracer
+--------------------------------
+
 Record trait change events in single and multi-threaded environments.
+Adapted from https://docs.enthought.com/traits/_modules/traits/util/event_tracer.html
 """
 
 import inspect
@@ -176,7 +180,7 @@ class MultiThreadRecordContainer(object):
     def get_change_event_collector(self, thread_name):
         """ Return the dedicated RecordContainer for the thread.
 
-        If no RecordContainer is found for `thread_name` then a new
+        If no RecordContainer is found for ``thread_name`` then a new
         RecordContainer is created.
 
         """

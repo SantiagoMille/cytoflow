@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on Nov 23, 2015
+"""
+cytoflowgui.editors.toggle_button
+---------------------------------
 
-@author: brian
-'''
+A button that can be toggled off and on.
+"""
 
 # for local debugging
 if __name__ == '__main__':
@@ -44,8 +45,8 @@ class _ToggleButton(Editor):
     #  Trait definitions:
     #---------------------------------------------------------------------------
 
-    # The button label
     label = Str
+    """The button label"""
 
     #---------------------------------------------------------------------------
     #  Finishes initializing the editor by creating the underlying toolkit
@@ -91,14 +92,14 @@ class ToggleButtonEditor(BasicEditorFactory):
 
     klass = _ToggleButton
 
-    # Value to set when the button is clicked
     value = Property
- 
-    # Optional label for the button
+    """Value to set when the button is clicked"""
+
     label = Str
+    """Optional label for the button"""
  
-    # The name of the external object trait that the button label is synced to
     label_value = Str
+    """The name of the external object trait that the button label is synced to"""
  
         
 if __name__ == '__main__':

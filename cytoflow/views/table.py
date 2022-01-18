@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.table
 --------------------
-'''
+
+"Plot" a tabular view of a statistic.
+
+`TableView` -- the `IView` class that makes the plot.
+"""
 
 from warnings import warn
 from traits.api import HasStrictTraits, Str, provides, Tuple, Constant
@@ -38,27 +42,33 @@ import cytoflow.utility as util
 class TableView(HasStrictTraits):
     """
     "Plot" a tabular view of a statistic.  Mostly useful for GUIs.  Each level 
-    of the statistic's index must be used in :attr:`row_facet`, 
-    :attr:`column_facet`, :attr:`subrow_facet`, or :attr:`subcolumn_facet`.
+    of the statistic's index must be used in `row_facet`, 
+    `column_facet`, `subrow_facet`, or `subcolumn_facet`.
     This module can't "plot" a statistic with more than four index levels
-    unless :attr:`subset` is set and that results in extra levels being 
+    unless `subset` is set and that results in extra levels being 
     dropped.
     
     Attributes
     ----------
     statistic : (str, str)
         The name of the statistic to plot.  Must be a key in the  
-        :attr:`~Experiment.statistics` attribute of the :class:`~.Experiment`
+        `Experiment.statistics` attribute of the `Experiment`
         being plotted.  Each level of the statistic's index must be used 
-        in :attr:`row_facet`, :attr:`column_facet`, :attr:`subrow_facet`, or
-        :attr:`subcolumn_facet`.
+        in `row_facet`, `column_facet`, `subrow_facet`, or
+        `subcolumn_facet`.
         
-    row_facet, column_facet : str
-        The statistic facets to be used as row and column headers.
+    row_facet : str
+        The statistic facet to be used as row headers.
+
+    column_facet : str
+        The statistic facet to be used as column headers.
         
-    subrow_facet, subcolumn_facet : str
-        The statistic facets to be used as subrow and subcolumn headers.
-        
+    subrow_facet : str
+        The statistic facet to be used as subrow headers.
+
+    subcolumn_facet : str
+        The statistic facet to be used as subcolumn headers.
+                
     subset : str
         A Python expression used to select a subset of the statistic to plot.
         

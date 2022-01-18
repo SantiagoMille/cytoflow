@@ -1,8 +1,40 @@
-'''
-Created on Jan 15, 2021
+#!/usr/bin/env python3.8
+# coding: latin-1
 
-@author: brian
-'''
+# (c) Massachusetts Institute of Technology 2015-2018
+# (c) Brian Teague 2018-2022
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.workflow.subset
+---------------------------
+
+Structured representation of the possible clauses for a **subset** 
+argument to `IOperation.estimate` or `IView.plot`.  
+
+`ISubset` - The top-level `traits.has_traits.Interface`
+
+`BoolSubset` - represents a subset of True or False values from a boolean 
+    condition
+
+`CategorySubset` - represents a subset of one or more values from a categorical
+    condition.
+    
+`RangeSubset` - represents a subset that is a range of values from a 
+    numerical condition.
+"""
 
 from traits.api import (provides, Interface, Str, List, Property, Bool,
                         HasStrictTraits, CFloat, Undefined, observe)
@@ -12,12 +44,16 @@ from cytoflow import utility as util
 from .serialization import camel_registry, traits_repr
 
 class ISubset(Interface):
+    """The interface that the rest of the subset classes must implement."""
+    
     name = Str
     values = List
     str = Property(Str)
     
 @provides(ISubset)
 class BoolSubset(HasStrictTraits):
+    """A subset that selects either True or False values from a boolean condition"""
+    
     name = Str
     values = List  # unused
     selected_t = Bool(False)
@@ -61,6 +97,8 @@ def _load_bool_subset(data, version):
 
 @provides(ISubset)
 class CategorySubset(HasStrictTraits):
+    """A subset that selects one or more values from a categorical condition"""
+    
     name = Str
     values = List
     selected = List
@@ -106,6 +144,8 @@ def _load_category_subset(data, version):
 
 @provides(ISubset)
 class RangeSubset(HasStrictTraits):
+    """A subset that selects a range from a numerical condition"""
+    
     name = Str
     values = List
     high = CFloat(Undefined)

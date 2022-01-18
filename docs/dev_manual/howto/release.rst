@@ -22,20 +22,29 @@ Tests
 
   	  nose2 -c package/nose2.cfg cytoflowgui.tests -N 8
   	  
+- Make sure the GitHub Actions are running to completion, at 
+  https://github.com/cytoflow/cytoflow/actions
+  	  
     
 Documentation
 -------------
 
 - Build the developers' manual and check it for completeness::
 
+      conda install "sphinx==4.2.0" pandoc
       python setup.py build_sphinx
   
 - Build the user manual and check it for completeness::
 
-  	  python setup.py build_sphinx -b user_manual
+  	  sphinx-build docs/user_manual/reference cytoflowgui/help
   	  
-Packaging
----------
+- Make sure that the ReadTheDocs build is working at 
+  https://readthedocs.org/projects/cytoflow/builds/
+
+
+  	  
+Test the packaging
+------------------
   	  
 - Build the conda package locally::
 
@@ -54,12 +63,24 @@ Packaging
 - Make sure that the :mod:`pyinstaller` distribution will build on your local 
   machine (back in your development environment).  ::
 
+  	  pip install pyinstaller==4.8
   	  pyinstaller package/pyinstaller.spec 
-
-- Make sure that the ReadTheDocs build is working.
   
 - Make sure that :mod:`pyinstaller` built the executables on all three supported
-  platforms.  Download and test that all three start and can run a basic workflow.
+  platforms. On each of the three supported platforms?  
+  
+  * Download the one-click from GitHub Actions. Make sure it starts and can execute a basic workflow.
+  * Download the conda package from GitHub Actions. Create a local ``anaconda`` environment and install it.
+    Check that it runs as both a module and a GUI ::
+  
+      conda env create --name cf.test -f environment.yml
+      conda activate cf.test
+      conda install ./cytoflow-*******-tar.bz2
+      python -c "import cytoflow"
+      cytoflow
+      
+  
+  
 
 
 

@@ -1,5 +1,5 @@
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -94,6 +94,10 @@ jobs:
       run: |
         mkdir dist
         python package/move_conda_package.py
+        
+    - name: Copy environment.yml into the dist folder
+      run: |
+        cp environment.yml dist/
         
     - name: List dist
       run: ls dist/
@@ -190,8 +194,8 @@ jobs:
         
     - name: Install packaging deps
       run: |
-        conda install --yes --quiet 'sphinx==4.0.2' 'bleach==3.3.0'
-        pip install "pyinstaller==4.2"
+        conda install --yes --quiet 'sphinx==4.2.0' pandoc
+        pip install "pyinstaller==4.8"
         
     - name: Build embedded help docs
       run: |

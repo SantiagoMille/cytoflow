@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ class TestImport(unittest.TestCase):
                  'Cytek DxP10.fcs',
                  'Cytek xP5.fcs',
                  'Cytek NL-2000.fcs',
+                 'Guava Muse.fcs',
                  'iCyt - Eclipse.lmd',
                  'Millipore - Guava.fcs',
                  'Miltenyi Biotec - MACSQuant Analyzer.fcs',
@@ -99,7 +100,29 @@ class TestImport(unittest.TestCase):
             path = self.cwd + '/data/instruments/' + file
             import_op = flow.ImportOp(tubes = [flow.Tube(file = path)])
             import_op.apply()
-    
+            
+    def testDataset(self):
+        file = self.cwd + '/data/instruments/Guava Muse.fcs'
+        ex1 = flow.ImportOp(tubes = [flow.Tube(file = file)],
+                            data_set = 0).apply()
+        
+        ex2 = flow.ImportOp(tubes = [flow.Tube(file = file)],
+                            data_set = 1).apply()
+                            
+        self.assertNotEqual(len(ex1), len(ex2))
+
+        ex3 = flow.ImportOp(tubes = [flow.Tube(file = file)],
+                            data_set = 2).apply()
+                            
+        self.assertNotEqual(len(ex2), len(ex3))
+
+        
+        ex4 = flow.ImportOp(tubes = [flow.Tube(file = file)],
+                            data_set = 3).apply()
+                            
+        self.assertNotEqual(len(ex3), len(ex4))
+
+                            
 if __name__ == "__main__":
     import sys;sys.argv = ['', 'TestImport.testManufacturers']
     unittest.main()

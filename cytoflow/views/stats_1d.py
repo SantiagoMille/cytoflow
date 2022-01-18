@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.stats_1d
 -----------------------
-'''
+
+Plot a statistic with a numeric variable on the X axis.
+
+`Stats1DView` -- the `IView` class that makes the plot.
+"""
 
 from traits.api import provides, Constant
 import matplotlib as mpl
@@ -93,7 +97,7 @@ class Stats1DView(Base1DStatisticsView):
     def enum_plots(self, experiment):
         """
         Returns an iterator over the possible plots that this View can
-        produce.  The values returned can be passed to :meth:`plot`.
+        produce.  The values returned can be passed to `plot`.
         """
                 
         return super().enum_plots(experiment)
@@ -142,7 +146,7 @@ class Stats1DView(Base1DStatisticsView):
         Notes
         -----
                 
-        Other `kwargs` are passed to `matplotlib.pyplot.plot <https://matplotlib.org/devdocs/api/_as_gen/matplotlib.pyplot.plot.html>`_
+        Other ``kwargs`` are passed to `matplotlib.pyplot.plot`
         
         """
 

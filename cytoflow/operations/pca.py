@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.pca
 -----------------------
-'''
+
+Apply principal component analysis (PCA) to flow data -- decomposes the
+multivariate data set into orthogonal components that explain the maximum
+amount of variance.  `pca` has one class:
+
+`PCAOp` -- the `IOperation` that applies PCA to an `Experiment`.
+"""
 
 
 from traits.api import (HasStrictTraits, Str, Dict, Any, Instance, 
@@ -39,13 +45,13 @@ class PCAOp(HasStrictTraits):
     Use principal components analysis (PCA) to decompose a multivariate data
     set into orthogonal components that explain a maximum amount of variance.
     
-    Call :meth:`estimate` to compute the optimal decomposition.
+    Call `estimate` to compute the optimal decomposition.
       
-    Calling :meth:`apply` creates new "channels" named ``{name}_1 ... {name}_n``,
-    where ``name`` is the :attr:`name` attribute and ``n`` is :attr:`num_components`.
+    Calling `apply` creates new "channels" named ``{name}_1 ... {name}_n``,
+    where ``name`` is the `name` attribute and ``n`` is `num_components`.
 
     The same decomposition may not be appropriate for different subsets of the data set.
-    If this is the case, you can use the :attr:`by` attribute to specify 
+    If this is the case, you can use the `by` attribute to specify 
     metadata by which to aggregate the data before estimating (and applying) a 
     model.  The PCA parameters such as the number of components and the kernel
     are the same across each subset, though.
@@ -60,8 +66,8 @@ class PCAOp(HasStrictTraits):
 
     scale : Dict(Str : {"linear", "logicle", "log"})
         Re-scale the data in the specified channels before fitting.  If a 
-        channel is in :attr:`channels` but not in :attr:`scale`, the current 
-        package-wide default (set with :func:`.set_default_scale`) is used.
+        channel is in `channels` but not in `scale`, the current 
+        package-wide default (set with `set_default_scale`) is used.
 
     num_components : Int (default = 2)
         How many components to fit to the data?  Must be a positive integer.
@@ -69,7 +75,7 @@ class PCAOp(HasStrictTraits):
     by : List(Str)
         A list of metadata attributes to aggregate the data before estimating
         the model.  For example, if the experiment has two pieces of metadata,
-        ``Time`` and ``Dox``, setting :attr:`by` to ``["Time", "Dox"]`` will 
+        ``Time`` and ``Dox``, setting `by` to ``["Time", "Dox"]`` will 
         fit the model separately to each subset of the data with a unique 
         combination of ``Time`` and ``Dox``.
         
@@ -172,7 +178,7 @@ class PCAOp(HasStrictTraits):
         Parameters
         ----------
         experiment : Experiment
-            The :class:`.Experiment` to use to estimate the k-means clusters
+            The `Experiment` to use to estimate the k-means clusters
             
         subset : str (default = None)
             A Python expression that specifies a subset of the data in 
@@ -259,7 +265,6 @@ class PCAOp(HasStrictTraits):
             # drop data that isn't in the scale range
             for c in self.channels:
                 x = x[~(np.isnan(x[c]))]
-            x = x.values
              
             pca[group] = \
                 sklearn.decomposition.PCA(n_components = self.num_components,
@@ -278,7 +283,7 @@ class PCAOp(HasStrictTraits):
         Returns
         -------
         Experiment
-            a new Experiment with additional :attr:`~Experiment.channels` 
+            a new Experiment with additional `Experiment.channels` 
             named ``name_1 ... name_n``
 
         """
@@ -373,5 +378,7 @@ class PCAOp(HasStrictTraits):
                 new_experiment.data.loc[group_idx, c] = x_tf[:, ci]
 
         new_experiment.data.dropna(inplace = True)
+        new_experiment.data.reset_index(drop = True, inplace = True)
+
         new_experiment.history.append(self.clone_traits(transient = lambda _: True))
         return new_experiment

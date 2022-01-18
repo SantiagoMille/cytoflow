@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.8
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+cytoflowgui.workflow.operations.ratio
+-------------------------------------
+
+"""
 
 from textwrap import dedent
 from traits.api import Str, provides
@@ -33,6 +38,10 @@ class RatioWorkflowOp(WorkflowOperation, RatioOp):
     name = Str(apply = True)
     numerator = Str(apply = True)
     denominator = Str(apply = True)
+    
+    def clear_estimate(self):
+        # no-op
+        return
     
     def get_notebook_code(self, idx):
         op = RatioOp()

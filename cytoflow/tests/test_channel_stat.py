@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ Created on Dec 1, 2015
 import unittest
 
 import cytoflow as flow
+import pandas as pd
 import cytoflow.utility as util
 from .test_base import ImportedDataSmallTest
 
@@ -49,6 +50,8 @@ class TestChannelStats(ImportedDataSmallTest):
         stat = ex.statistics[("ByDox", "len")]
         self.assertIn("Dox", stat.index.names)
         self.assertIn("T", stat.index.names)
+        
+        self.assertIsInstance(ex.data.index, pd.RangeIndex)
         
         
     def testTuple(self):

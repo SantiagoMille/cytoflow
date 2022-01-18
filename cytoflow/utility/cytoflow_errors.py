@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,19 @@
 cytoflow.utility.cytoflow_errors
 --------------------------------
 
-Custom errors for :class:`.cytoflow`.  Allows for custom handling in the GUI.
+Custom errors for `cytoflow`.  Allows for custom handling in the GUI.
+
+`CytoflowError` -- a general error
+
+`CytoflowOpError` -- an error raised by an operation
+
+`CytoflowViewError` -- an error raised by a view
+
+`CytoflowWarning` -- a general warning
+
+`CytoflowOpWarning` -- a warning raised by an operation
+
+`CytoflowViewWarning` -- a warning raised by a view
 """
 
 import warnings

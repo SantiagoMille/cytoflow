@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.8
 # coding: latin-1
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,9 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Created on Feb 11, 2015
+cytoflowgui.run
+---------------
 
-@author: brian
+The entry-point for the GUI -- sets up and starts the remote process, configures
+logging, loads the Envisage plugins, and starts the GUI loop.
 """
 
 try:
@@ -34,6 +36,9 @@ import sys, multiprocessing, logging, traceback, threading, argparse
 logger = logging.getLogger(__name__)
 
 def log_notification_handler(_, trait_name, old, new):
+    """
+    Exception handler for traits notifications
+    """
     
     (exc_type, exc_value, tb) = sys.exc_info()
     logger.debug('Exception occurred in traits notification '
@@ -49,6 +54,7 @@ def log_notification_handler(_, trait_name, old, new):
                   .format(err_string, err_loc, err_ctx) )
     
 def log_excepthook(typ, val, tb):
+    """Exception handler for global exceptions"""
     tb_str = "".join(traceback.format_tb(tb))
     logger.debug("Global exception: {0}\n{1}: {2}".format(tb_str, typ, val))
     
@@ -57,6 +63,8 @@ def log_excepthook(typ, val, tb):
                   .format(typ, val, tb_str))
                          
 def run_gui():
+    """Run the GUI!"""
+    
     try:
         # if we're running as a one-click from a MacOS app,
         # we need to reset the working directory
@@ -74,11 +82,24 @@ def run_gui():
 
     # this is ridiculous, but here's the situation.  Qt5 now uses Chromium
     # as their web renderer.  Chromium needs OpenGL.  if you don't
-    # initialize OpoenGL here, things crash on some platforms.
+    # initialize OpenGL here, things crash on some platforms.
     
     # so now i guess we depend on opengl too. 
     
-    from OpenGL import GL  # @UnresolvedImport @UnusedImport
+    try:
+        from OpenGL import GL  # @UnresolvedImport @UnusedImport
+    except ImportError:
+        logger.info("Patching util.find_library for MacOS")
+        from ctypes import util
+        orig_find_library = util.find_library
+
+        def new_find_library(name):
+            res = orig_find_library(name)
+            if res: return res
+            return '/System/Library/Frameworks/' + name + '.framework/' + name
+        util.find_library = new_find_library
+        from OpenGL import GL
+        util.find_library = orig_find_library
 
     # need to import these before a QCoreApplication is instantiated.  and that seems
     # to happen in .... 'import cytoflow' ??
@@ -278,52 +299,63 @@ def run_gui():
 
         
 def monitor_remote_process(proc):
+    """The main method for the (local) thread that monitors the remote process"""
     proc.join()
     if proc.exitcode:
         logging.error("Remote process exited with {}".format(proc.exitcode))
     
 
 def start_remote_process():
+    """
+    Start the remote process.  Creates pipes and synchronization primitives, 
+    sets up logging, and starts the remote process and the monitoring thread.
+    """
 
-        # communications channels
-        parent_workflow_conn, child_workflow_conn = multiprocessing.Pipe()  
-        parent_mpl_conn, child_matplotlib_conn = multiprocessing.Pipe()
-        running_event = multiprocessing.Event()
-
-        # logging
-        from logging.handlers import QueueListener
-        from cytoflowgui.utility import CallbackHandler
-        log_q = multiprocessing.Queue()
-        def handle(record):
-            logger = logging.getLogger(record.name)
-            if logger.isEnabledFor(record.levelno):
-                logger.handle(record)
-                
-        handler = CallbackHandler(handle)
-        queue_listener = QueueListener(log_q, handler)
-        queue_listener.start()
-   
-        remote_process = multiprocessing.Process(target = remote_main,
-                                                 name = "remote process",
-                                                 args = [parent_workflow_conn,
-                                                         parent_mpl_conn,
-                                                         log_q,
-                                                         running_event])
-        
-        remote_process.daemon = True
-        remote_process.start() 
-        running_event.wait()
-        
-        remote_process_thread = threading.Thread(target = monitor_remote_process,
-                                                 name = "monitor remote process",
-                                                 args = [remote_process])
-        remote_process_thread.daemon = True
-        remote_process_thread.start()
-        
-        return (remote_process, child_workflow_conn, child_matplotlib_conn, queue_listener)
+    # communications channels
     
+    parent_workflow_conn, child_workflow_conn = multiprocessing.Pipe()  
+    parent_mpl_conn, child_matplotlib_conn = multiprocessing.Pipe()
+    running_event = multiprocessing.Event()
+
+    # logging
+    from logging.handlers import QueueListener
+    from cytoflowgui.utility import CallbackHandler
+    log_q = multiprocessing.Queue()
+    def handle(record):
+        logger = logging.getLogger(record.name)
+        if logger.isEnabledFor(record.levelno):
+            logger.handle(record)
+            
+    handler = CallbackHandler(handle)
+    queue_listener = QueueListener(log_q, handler)
+    queue_listener.start()
+
+    remote_process = multiprocessing.Process(target = remote_main,
+                                             name = "remote process",
+                                             args = [parent_workflow_conn,
+                                                     parent_mpl_conn,
+                                                     log_q,
+                                                     running_event])
+    
+    remote_process.daemon = True
+    remote_process.start() 
+    running_event.wait()
+    
+    remote_process_thread = threading.Thread(target = monitor_remote_process,
+                                             name = "monitor remote process",
+                                             args = [remote_process])
+    remote_process_thread.daemon = True
+    remote_process_thread.start()
+    
+    return (remote_process, child_workflow_conn, child_matplotlib_conn, queue_listener)
+ 
 
 def remote_main(parent_workflow_conn, parent_mpl_conn, log_q, running_event):
+    """
+    The main method for the remote process. Configures logging, sets up
+    the matplotlib backend, and instantiates the `RemoteWorkflow`.
+    """
+    
     # this should only ever be main method after a spawn() call 
     # (not fork). So we should have a fresh logger to set up.
         
@@ -341,13 +373,10 @@ def remote_main(parent_workflow_conn, parent_mpl_conn, log_q, running_event):
     
     import matplotlib
     matplotlib.use('module://cytoflowgui.matplotlib_backend_remote')
-    
-    # start threads
-    
-    from traits.api import push_exception_handler    
-    from cytoflowgui.workflow import RemoteWorkflow
-    
+
     # install a global (gui) error handler for traits notifications
+        
+    from traits.api import push_exception_handler        
     push_exception_handler(handler = log_notification_handler,
                            reraise_exceptions = False,
                            main = True)
@@ -360,6 +389,8 @@ def remote_main(parent_workflow_conn, parent_mpl_conn, log_q, running_event):
     cytoflow.RUNNING_IN_GUI = True
     
     running_event.set()
+    
+    from cytoflowgui.workflow import RemoteWorkflow
     RemoteWorkflow().run(parent_workflow_conn, parent_mpl_conn)
 
 if __name__ == '__main__':

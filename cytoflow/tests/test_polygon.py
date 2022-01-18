@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ Created on Dec 1, 2015
 '''
 import unittest
 import cytoflow as flow
+import pandas as pd
 from .test_base import ImportedDataSmallTest
 
 
@@ -45,9 +46,34 @@ class Test(ImportedDataSmallTest):
         # how many events ended up in the gate?
         self.assertEqual(ex2.data.groupby("Polygon").size()[True], 4126)
         
+        self.assertIsInstance(ex2.data.index, pd.RangeIndex)
+        
+    def testInclusive(self):
+        # make a polygon with a segment that goes through the origin
+        self.gate = flow.PolygonOp(name = "Polygon",
+                                   xchannel = "V2-A",
+                                   ychannel = "Y2-A",
+                                   vertices = [(0.0, -1.0),
+                                               (0.0, 1.0),
+                                               (1.0, 1.0),
+                                               (1.0, -1.0)])
+        
+        # set a data point at 0.0, 0.0
+        self.ex.data.at[0, 'V2-A'] = 0.0
+        self.ex.data.at[0, 'Y2-A'] = 0.0
+        
+        # make sure that the point at 0.0, 0.0 is included in the gate
+        ex2 = self.gate.apply(self.ex)
+        self.assertEqual(ex2.data.groupby("Polygon").size()[True], 1)
+        
     def testPlot(self):
         self.gate.default_view().plot(self.ex)
 
+    def testPlotParams(self):
+        self.gate.default_view().plot(self.ex, patch_props = {'color' : 'blue'})
+
+    def testDensityPlot(self):
+        self.gate.default_view(density = True).plot(self.ex)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

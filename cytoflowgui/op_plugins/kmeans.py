@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ an unsupervized manner.
 
     A list of metadata attributes to aggregate the data before estimating
     the model.  For example, if the experiment has two pieces of metadata,
-    ``Time`` and ``Dox``, setting :attr:`by` to ``["Time", "Dox"]`` will fit 
+    ``Time`` and ``Dox``, setting **By** to ``["Time", "Dox"]`` will fit 
     the model separately to each subset of the data with a unique combination of
     ``Time`` and ``Dox``.
 

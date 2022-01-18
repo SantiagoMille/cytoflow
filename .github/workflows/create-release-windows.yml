@@ -1,5 +1,5 @@
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,6 +42,10 @@ jobs:
       id: display
       run: |
         echo 'Output from Find Tag: ${{steps.tag.outputs.tag}}'
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -106,6 +110,10 @@ jobs:
         ref: ${{ github.event.client_payload.ref }}
         fetch-depth: 0
         submodules: true
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -120,6 +128,10 @@ jobs:
     - name: Install package locally
       run: |
         python setup.py build_ext --inplace
+        
+    - name: Reset git
+      run: |
+        git reset --hard
         
     - name: Build wheel
       run: |
@@ -184,6 +196,10 @@ jobs:
       id: display
       run: |
         echo 'Output from Find Tag: ${{steps.tag.outputs.tag}}'
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -201,12 +217,12 @@ jobs:
         
     - name: Install packaging deps
       run: |
-        conda install --yes --quiet 'sphinx==3.4.3'
-        pip install "pyinstaller==4.2"
+        conda install --yes --quiet 'sphinx==4.2.0' pandoc
+        pip install "pyinstaller==4.8"
         
     - name: Build embedded help docs
       run: |
-        python setup.py build_sphinx -b embedded_help
+        sphinx-build docs/user_manual/reference cytoflowgui/help
         
     - name: Build GUI binary
       run: |

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,9 +21,9 @@
 cytoflow.operations
 -------------------
 
-This package contains all of :mod:`cytoflow`'s operations -- classes
-implementing :class:`IOperation` whose ``apply()`` function takes an 
-:class:`Experiment` and returns an :class:`Experiment`.  
+This package contains all :mod:`cytoflow` operations -- classes
+implementing `IOperation` whose `IOperation.apply` function takes an 
+`Experiment` and returns an `Experiment`.  
 """
 
 from .i_operation import IOperation

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+cytoflowgui.matplotlib_backend_remote
+-------------------------------------
+
 A matplotlib backend that renders across a process boundary.  This file has
 the "remote" canvas -- the Agg renderer into which pyplot.plot() renders.
 
@@ -52,8 +55,6 @@ from matplotlib.figure import Figure
 #from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-#from pyface.qt import QtCore, QtGui
-
 import numpy as np
 
 # needed for pylab_setup
@@ -64,6 +65,11 @@ from matplotlib.backend_bases import FigureManagerBase
 logger = logging.getLogger(__name__)
 
 class Msg(object):
+    """
+    Messages sent between the local and remote canvases.
+    There is an identical class in `matplotlib_backend_local` because we
+    don't want these two modules requiring one another
+    """
     DRAW = "DRAW"
     BLIT = "BLIT"
     WORKING = "WORKING"
@@ -78,6 +84,8 @@ class Msg(object):
     PRINT = "PRINT"
     
 def log_exception():
+    """Catch and log exceptions (with their tracebacks"""
+
     (exc_type, exc_value, tb) = sys.exc_info()
 
     err_string = traceback.format_exception_only(exc_type, exc_value)[0]
@@ -95,11 +103,9 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
     """
     The canvas the figure renders into in the remote process (ie, the one
     where someone is calling pyplot.plot()
-   """
+    """
    
-    def __init__(self, parent_conn, process_events, plot_lock, figure):
-#         traceback.print_stack()
-        
+    def __init__(self, parent_conn, process_events, plot_lock, figure):      
         FigureCanvasAgg.__init__(self, figure)
         
         self.parent_conn = parent_conn
@@ -122,19 +128,23 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
         
         self.update_remote = threading.Event()
                 
-        t = threading.Thread(target = self.listen_for_remote, 
+        t = threading.Thread(target = self.listen_for_local, 
                              name = "canvas listen", 
                              args = ())
         t.daemon = True 
         t.start()
         
-        t = threading.Thread(target = self.send_to_remote, 
+        t = threading.Thread(target = self.send_to_local, 
                              name = "canvas send",
                              args=())
         t.daemon = True
         t.start()
         
-    def listen_for_remote(self): 
+    def listen_for_local(self): 
+        """
+        The main method for the thread that listens for messages from
+        the local canvas
+        """
         while self.parent_conn.poll(None):
             try:
                 (msg, payload) = self.parent_conn.recv()
@@ -142,7 +152,7 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
                 return
             
             if msg != Msg.MOUSE_MOVE_EVENT:
-                logger.debug("FigureCanvasAggRemote.listen_for_remote :: {}"
+                logger.debug("FigureCanvasAggRemote.listen_for_local :: {}"
                               .format(msg, payload))
                 
             try:              
@@ -194,9 +204,13 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
             except Exception:
                 log_exception()
             
-    def send_to_remote(self):
+    def send_to_local(self):
+        """
+        The main method for the thread that sends messages to the local canvas
+        """
+        
         while self.update_remote.wait():
-            logger.debug("FigureCanvasAggRemote.send_to_remote")
+            logger.debug("FigureCanvasAggRemote.send_to_local")
                 
             self.update_remote.clear()
             
@@ -221,11 +235,16 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
             self.parent_conn.send(msg)
 
         
-    def draw(self, *args, **kwargs):
+    def draw(self, *args, **kwargs):  # @UnusedVariable
+        """
+        When the canvas is instructed to draw itself, copy the Agg buffer out
+        to a numpy array and send it to the local process.
+        """
         logger.debug("FigureCanvasAggRemote.draw()")
+
+        FigureCanvasAgg.draw(self)
             
         with self.buffer_lock:
-            FigureCanvasAgg.draw(self)
             
             self.buffer = np.array(self.renderer.buffer_rgba())
                 
@@ -237,8 +256,10 @@ class FigureCanvasAggRemote(FigureCanvasAgg):
 
     def blit(self, bbox=None):
         """
-        Blit the region in bbox
+        When instructed to blit a bounding box, copy the region in the bounding
+        box to a numpy array and send it to the local canvas.
         """
+        
         # If bbox is None, blit the entire canvas. Otherwise
         # blit only the area defined by the bbox.
         logger.debug("FigureCanvasAggRemote.blit()")
@@ -275,7 +296,9 @@ singleton_lock = threading.Lock()
 
 def new_figure_manager(num, *args, **kwargs):
     """
-    Create a new figure manager instance
+    Create a new figure manager instance.  This maintains the remote canvas as
+    a singleton -- else, each new canvas would need a copy of the pipes, locks,
+    etc.
     """
     
     global remote_canvas
@@ -329,3 +352,10 @@ FigureCanvas = FigureCanvasAggRemote
 
 # we don't need a figure manager with any more than default functionality
 FigureManager = FigureManagerBase
+
+# monkey-patch seaborn
+def tight_layout(self, *args, **kwargs):
+    pass
+
+import seaborn.axisgrid  # @UnusedImport
+seaborn.axisgrid.Grid.tight_layout = tight_layout

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Created on Mar 15, 2015
+cytoflowgui.view_plugins.i_view_plugin
+--------------------------------------
 
-@author: brian
 """
 
 from traits.api import Interface, Constant, List
@@ -57,7 +57,7 @@ class IViewPlugin(Interface):
         
         Returns
         -------
-        :class:`IView`
+        `IView`
             An instance of the view that this plugin wraps
         """
         
@@ -66,7 +66,7 @@ class IViewPlugin(Interface):
         """
         Gets an instance of the handler for this view or params model.
         
-        NOTE: You have to check to see what the class of `model` is, and return
+        NOTE: You have to check to see what the class of ``model`` is, and return
         an appropriate handler!
         
         Parameters
@@ -79,7 +79,7 @@ class IViewPlugin(Interface):
             
         Returns
         -------
-        :class:`traitsui.Controller`
+        `traitsui.handler.Controller`
         """
         
 
@@ -89,7 +89,7 @@ class IViewPlugin(Interface):
         
         Returns
         -------
-        :class:`pyface.ImageResource`
+        `pyface.i_image_resource.IImageResource`
             The SVG icon    
         """
         
@@ -97,7 +97,7 @@ class IViewPlugin(Interface):
     def get_help(self):
         """
         Gets the HTML help text for this plugin, deriving the filename from the class name.
-        Probably best to use the default implementation in :class:`PluginHelpMixin`
+        Probably best to use the default implementation in `cytoflowgui.view_plugins.view_plugin_base.PluginHelpMixin`
         
          
         Returns
@@ -109,12 +109,12 @@ class IViewPlugin(Interface):
         
     def get_plugin(self):
         """
-        Returns an instance of :class:`envisage.Plugin` implementing
-        :class:`.IViewPlugin`.  Usually returns ``self``.
+        Returns an instance of `envisage.plugin.Plugin` implementing
+        `IViewPlugin`.  Usually returns ``self``.
         
         Returns
         -------
-        :class:`envisage.Plugin`
+        `envisage.plugin.Plugin`
         """
         
               

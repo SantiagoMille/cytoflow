@@ -1,8 +1,27 @@
-'''
-Created on Jan 15, 2021
+#!/usr/bin/env python3.8
+# coding: latin-1
 
-@author: brian
-'''
+# (c) Massachusetts Institute of Technology 2015-2018
+# (c) Brian Teague 2018-2022
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.workflow.views.view_base
+------------------------------------
+
+"""
 
 import pandas as pd
 import natsort
@@ -34,7 +53,7 @@ class IterWrapper(object):
 
 class IWorkflowView(IView):
     """
-    An interface that extends a :mod:`cytoflow` view with functions 
+    An interface that extends a `cytoflow` view with functions 
     required for GUI support.
     
     In addition to implementing the interface below, another common thing to 
@@ -81,7 +100,7 @@ class IWorkflowView(IView):
         - Changed.ESTIMATE_RESULT -- the results of calling "estimate" changed
 
         If `should_plot` was called from an event handler, the event is passed
-        in as `payload`
+        in as ``payload``
 
         """
         
@@ -93,7 +112,7 @@ class IWorkflowView(IView):
         Parameters
         ----------
         idx : integer
-            The index of the :class:`.WorkflowItem` that holds this view.
+            The index of the `WorkflowItem` that holds this view.
             
         Returns
         -------
@@ -108,7 +127,12 @@ class WorkflowView(HasStrictTraits):
     
     Make sure this class is FIRST in the derived class's declaration so it
     shows up earlier in the MRO than the base class from the 
-    :module:`cytoflow` module.
+    `cytoflow` module.
+    
+    Attributes
+    ----------
+    current_plot : Any
+        Passed as the ``current_plot`` keyword to the underlying `IView.plot`
     """
     
     # make the "current" value of plot_name an attribute so
@@ -138,14 +162,14 @@ class WorkflowView(HasStrictTraits):
     def should_plot(self, changed, payload):
         """
         Should the owning WorkflowItem refresh the plot when certain things
-        change?  `changed` can be:
+        change?  ``changed`` can be:
         - Changed.VIEW -- the view's parameters changed
         - Changed.RESULT -- this WorkflowItem's result changed
         - Changed.PREV_RESULT -- the previous WorkflowItem's result changed
         - Changed.ESTIMATE_RESULT -- the results of calling "estimate" changed
         
-        If :meth:`should_plot` is called from a notification handler, the payload
-        is the handler `event` parameter.
+        If `should_plot` is called from a notification handler, the payload
+        is the handler ``event`` parameter.
         """
         return True
 
@@ -169,6 +193,15 @@ class WorkflowView(HasStrictTraits):
                                   .format(id = self.id))
         
 class WorkflowFacetView(WorkflowView):
+    """
+    A `WorkflowView` that subsets the data by a facet before plotting.
+    
+    Attributes
+    ----------
+    plotfacet : Str
+        What facet should `current_plot` refer to?
+    
+    """
     
     # add another facet for "plot_name".
     plotfacet = Str
@@ -185,8 +218,8 @@ class WorkflowFacetView(WorkflowView):
     
     def plot(self, experiment, **kwargs):
         """
-        A default :meth:`plot` that subsets by the :attr:`plotfacet` and
-        :attribute:`current_plot`. If you need it to do something else, you must
+        A default `plot` that subsets by the `plotfacet` and
+        `current_plot`. If you need it to do something else, you must
         override this method!
         """
          
@@ -203,7 +236,7 @@ class WorkflowByView(WorkflowView):
       
     def plot(self, experiment, **kwargs):
         """
-        A default :meth:`plot` that passes :attr:`current_plot` as the
+        A default `plot` that passes `current_plot` as the
         plot name.
         """
          

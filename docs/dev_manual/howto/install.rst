@@ -129,12 +129,16 @@ the appropriate file.
 
 * Clone the repository::
 
-    git clone https://github.com/cytoflow/cytoflow.git
+    git clone --recurse-submodules https://github.com/cytoflow/cytoflow.git
 
 * Create a new environment.  In this example, I have called it ``cf_dev``.
   In the new repository you just cloned, say::
 
     conda env create --name cf_dev --file environment.yml
+    
+.. note:: On Windows, you must edit ``environment.yml`` before you execute 
+   ``conda env create``.  Remove the last line, the one that reads
+   ``- nomkl # [not win]``
   
 * Activate the new environment::
     
@@ -162,7 +166,7 @@ the appropriate file.
   * **On Windows (64-bit)**: ``_Logicle.cp38-win_amd64.pyd``
   * **On MacOS**: ``_Logicle.cpython-38m-darwin.so``
   
-* Copy the file you just download into the `cytoflow/utility/logicle_ext/` folder
+* Copy the file you just download into the ``cytoflow/utility/logicle_ext/`` folder
   in your source tree.
   
 * Test that everything works.  Start a ``python`` interpreter and say::
@@ -175,7 +179,7 @@ the appropriate file.
 Running the point-and-click GUI program
 ---------------------------------------
 
-There are one-click bundles available at http://cytoflow.github.io/
+There are pre-built bundles available at http://cytoflow.github.io/
 
 Alternately, you can follow the instructions above for installing the 
 Anaconda package, then run ``cytoflow`` through the Anaconda Navigator or

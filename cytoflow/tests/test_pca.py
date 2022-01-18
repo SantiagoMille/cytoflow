@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ Created on Feb 4, 2018
 '''
 import unittest
 import cytoflow as flow
+import pandas as pd
 from .test_base import ImportedDataSmallTest
 
 
@@ -45,6 +46,8 @@ class TestPCA(ImportedDataSmallTest):
         ex2 = self.op.apply(self.ex)
         self.assertIn("PCA_1", ex2.channels)
         self.assertIn("PCA_2", ex2.channels)
+        
+        self.assertIsInstance(ex2.data.index, pd.RangeIndex)
         
     def testEstimateBy(self):
         self.op.by = ["Dox"]

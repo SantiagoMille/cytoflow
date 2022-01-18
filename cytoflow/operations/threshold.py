@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,19 +17,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.threshold
 -----------------------------
-'''
+
+Applies a threshold gate to an `Experiment`. `threshold` has two classes:
+
+`ThresholdOp` -- Applies the gate, given a threshold
+
+`ThresholdSelection` -- an `IView` that allows you to view and/or
+interactively set the threshold.
+"""
 
 from traits.api import (HasStrictTraits, Float, Str, Instance, 
-                        Bool, on_trait_change, provides, Any, 
+                        Bool, observe, provides, Any, Dict,
                         Constant)
     
 import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.widgets import Cursor
 
 import cytoflow.utility as util
 from cytoflow.views import ISelectionView, HistogramView
@@ -46,7 +54,7 @@ class ThresholdOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Used to name the new column in the
-        experiment that's created by :meth:`apply`
+        experiment that's created by `apply`
         
     channel : Str
         The name of the channel to apply the threshold on.
@@ -128,16 +136,16 @@ class ThresholdOp(HasStrictTraits):
         
         Parameters
         ----------
-        experiment : Experiment
-            the experiment to which this operation is applied
+        experiment : `Experiment`
+            the `Experiment` to which this operation is applied
             
         Returns
         -------
         Experiment
-            a new :class:`~experiment`, the same as the old experiment but with 
+            a new `Experiment`, the same as the old experiment but with 
             a new column of type ``bool`` with the same name as the operation 
-            :attr:`name`.  The new condition is ``True`` if the event's 
-            measurement in :attr:`channel` is greater than :attr:`threshold`;
+            `name`.  The new condition is ``True`` if the event's 
+            measurement in `channel` is greater than `threshold`;
             it is ``False`` otherwise.
         """
         
@@ -187,22 +195,15 @@ class ThresholdOp(HasStrictTraits):
 class ThresholdSelection(Op1DView, HistogramView):
     """
     Plots, and lets the user interact with, a threshold on the X axis.
-    
-    TODO - beautify!
-    
+        
     Attributes
     ----------
     interactive : Bool
         is this view interactive?
         
-    Notes
-    -----
-    We inherit `xfacet` and `yfacet` from `cytoflow.views.HistogramView`, but
-    they must both be unset!
-        
     Examples
     --------
-    In an Jupyter notebook with `%matplotlib notebook`
+    In an Jupyter notebook with ``%matplotlib notebook``
     
     >>> t = flow.ThresholdOp(name = "Threshold",
     ...                      channel = "Y2-A")
@@ -225,7 +226,9 @@ class ThresholdSelection(Op1DView, HistogramView):
     # internal state
     _ax = Any(transient = True)
     _line = Instance(Line2D, transient = True)
-    _cursor = Instance(util.Cursor, transient = True)
+    _cursor = Instance(Cursor, transient = True)
+    _line_props = Dict()
+
     
     def plot(self, experiment, **kwargs):
         """
@@ -233,18 +236,28 @@ class ThresholdSelection(Op1DView, HistogramView):
         
         Parameters
         ----------
+        
+        line_props : Dict
+           The properties of the `matplotlib.lines.Line2D` that are drawn
+           on top of the histogram.  They're passed directly to the 
+           `matplotlib.lines.Line2D` constructor.
+           Default: ``{color : 'black', linewidth : 2}``
         """
         
         if experiment is None:
             raise util.CytoflowViewError('experiment', "No experiment specified")
+        
+        self._line_props = kwargs.pop('line_props',
+                                        {'color' : 'black',
+                                         'linewidth' : 2})
 
         super(ThresholdSelection, self).plot(experiment, **kwargs)
         self._ax = plt.gca()        
-        self._draw_threshold()
-        self._interactive()
+        self._draw_threshold(None)
+        self._interactive(None)
     
-    @on_trait_change('op.threshold', post_init = True)
-    def _draw_threshold(self):
+    @observe('op.threshold', post_init = True)
+    def _draw_threshold(self, _):
         if not self._ax or not self.op.threshold:
             return
         
@@ -260,18 +273,18 @@ class ThresholdSelection(Op1DView, HistogramView):
             self._line = None
         
         if self.op.threshold:    
-            self._line = plt.axvline(self.op.threshold, linewidth=3, color='blue')
+            self._line = plt.axvline(self.op.threshold, **self._line_props)
             
         plt.draw()
         
-    @on_trait_change('interactive', post_init = True)
-    def _interactive(self):
+    @observe('interactive', post_init = True)
+    def _interactive(self, _):
         if self._ax and self.interactive:
-            self._cursor = util.Cursor(self._ax, 
-                                       horizOn=False,
-                                       vertOn=True,
-                                       color='blue',
-                                       useblit = True)
+            self._cursor = Cursor(self._ax, 
+                                  horizOn=False,
+                                  vertOn=True,
+                                  color='blue',
+                                  useblit = True)
             self._cursor.connect_event('button_press_event', self._onclick)
             
         elif self._cursor:

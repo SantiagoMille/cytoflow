@@ -1,8 +1,30 @@
-'''
-Created on Jan 16, 2021
+#!/usr/bin/env python3.8
+# coding: latin-1
 
-@author: brian
-'''
+# (c) Massachusetts Institute of Technology 2015-2018
+# (c) Brian Teague 2018-2022
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.editors.subset_list_editor
+--------------------------------------
+
+An editor for lists of `ISubset`. For each entry in the list, creates 
+an appropriate instance editor, each set up with appropriate ranges, 
+values, etc. from the experiment conditions and metadata.
+"""
 
 import pandas as pd
 
@@ -87,15 +109,17 @@ class _SubsetListEditor(_VerticalListEditor):
 
 
 class SubsetListEditor(VerticalListEditor):    
-    # the name of the trait containing the names --> values dict
     conditions = Str
-    
-    # the name of the trait containing the metadata dict
+    """The name of the trait containing the names --> values dict"""
+
     metadata = Str
-    
-    # a string to evaluate on the metadata to see if we include this condition
-    # in the editor
+    """The name of the trait containing the metadata dictionary"""
+
     when = Str
+    """
+    A string to evaluate on the metadata to see if we include this condition
+    in the editor
+    """
     
     # override some defaults
     style = Trait("custom", TraitPrefixList('simple', 'custom', 'text', 'readonly'))

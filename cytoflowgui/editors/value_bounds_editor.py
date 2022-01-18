@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# for local debugging
+"""
+cytoflowgui.editors.value_bounds_editor
+---------------------------------------
+
+A `traitsui.editors.range_editor.RangeEditor` that allows the user to 
+select a range of values from a list (specified in **values**, naturally).
+
+Uses `RangeSlider` for the widget.
+"""
 
 if __name__ == '__main__':
     import os
@@ -303,7 +311,11 @@ class _ValueBoundsEditor(EditorWithList):
             
     
 class ValuesBoundsEditor(EditorWithListFactory, RangeEditor):
-            
+    """
+    A `traitsui.editors.range_editor.RangeEditor` that uses a 
+    list of values instead of low & high range.
+    """
+      
     def _get_simple_editor_class(self):
         return _ValueBoundsEditor
     

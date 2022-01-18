@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,10 +25,10 @@ Use principal components analysis (PCA) to decompose a multivariate data
 set into orthogonal components that explain a maximum amount of variance.
 
 Creates new "channels" named ``{name}_1 ... {name}_n``,
-where ``name`` is the :attr:`name` attribute and ``n`` is :attr:`num_components`.
+where ``name`` is the **Name** attribute and ``n`` is **Num components**.
 
 The same decomposition may not be appropriate for different subsets of the data set.
-If this is the case, you can use the :attr:`by` attribute to specify 
+If this is the case, you can use the **By** attribute to specify 
 metadata by which to aggregate the data before estimating (and applying) a 
 model.  The PCA parameters such as the number of components and the kernel
 are the same across each subset, though.
@@ -53,7 +53,7 @@ are the same across each subset, though.
 
     A list of metadata attributes to aggregate the data before estimating
     the model.  For example, if the experiment has two pieces of metadata,
-    ``Time`` and ``Dox``, setting :attr:`by` to ``["Time", "Dox"]`` will 
+    ``Time`` and ``Dox``, setting **By** to ``["Time", "Dox"]`` will 
     fit the model separately to each subset of the data with a unique 
     combination of ``Time`` and ``Dox``.
         

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,13 +17,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.utility.hlog_scale
 ---------------------------
-'''
+
+A scale that transforms the data using the ``hyperlog`` function.  `hlog_scale` has
+several classes:
+
+`HlogScale` -- implements `IScale`, the `cytoflow` interface for the scale.
+
+`MatplotlibHlogScale` -- inherits `matplotlib.scale.ScaleBase`, implements
+the matplotlib interface
+
+`HlogMajorLocator` -- inherits `matplotlib.ticker.Locator`, lets matplotlib know where major
+tics are along a plot axis.
+
+`HlogMinorLocator` -- inherits `matplotlib.ticker.Locator`, lets matplotlib know where minor
+tics are along a plot axis
+
+`hlog`, `hlog_inv` -- the actual functions that perform the scale and inverse
+"""
 
 from traits.api import (HasTraits, Float, Property, Instance, Str,
-                        cached_property, Undefined, provides, Constant, Dict,
+                        Undefined, provides, Constant,
                         Tuple, Array)
                        
 import numpy as np
@@ -41,14 +57,14 @@ from .cytoflow_errors import CytoflowError
 @provides(IScale)
 class HlogScale(ScaleMixin):
     """
-    A scale that transforms the data using the `hyperlog` function.
+    A scale that transforms the data using the ``hyperlog`` function.
     
     This scaling method implements a "linear-like" region around 0, and a
     "log-like" region for large values, with a smooth transition between
     them.
     
     The transformation has one parameter, `b`, which specifies the location of
-    the transition from linear to log-like.  The default, `500`, is good for
+    the transition from linear to log-like.  The default, ``500``, is good for
     18-bit scales and not good for other scales.
     
     Attributes
@@ -126,9 +142,18 @@ class HlogScale(ScaleMixin):
                 raise CytoflowError("Unknown data type in HlogScale.inverse") from e
         
     def clip(self, data):
+        """
+        Clips data to the range of the scale function
+        """
+        
         return data
     
     def norm(self):
+        """
+        A factory function that returns `matplotlib.colors.Normalize` instance,
+        which normalizes values for a `matplotlib` color palette.
+        """
+        
         if self.channel:
             vmin = self.experiment[self.channel].min()
             vmax = self.experiment[self.channel].max()
@@ -152,6 +177,8 @@ class HlogScale(ScaleMixin):
         
         class HlogNormalize(matplotlib.colors.Normalize):
             def __init__(self, vmin, vmax, scale):
+                super().__init__(vmin, vmax)
+
                 self._scale = scale
                 matplotlib.colors.Normalize.__init__(self, vmin, vmax)
                 
@@ -182,12 +209,22 @@ class HlogScale(ScaleMixin):
             return Undefined
 
     def get_mpl_params(self):
+        """
+        Returns a dict with the traits needed to initialize an instance of
+        `MatplotlibHlogScale`
+        """
+        
         return {"b" : self.b,
                 "range" : self.range}
     
 register_scale(HlogScale)
         
-class MatplotlibHlogScale(HasTraits, matplotlib.scale.ScaleBase):   
+class MatplotlibHlogScale(HasTraits, matplotlib.scale.ScaleBase): 
+    """
+    A class that inherits from `matplotlib.scale.ScaleBase`, which 
+    implements all the bits for `matplotlib` to use a new scale.
+    """
+      
     name = "hlog"
     
     b = Float
@@ -222,6 +259,10 @@ class MatplotlibHlogScale(HasTraits, matplotlib.scale.ScaleBase):
         axis.set_minor_formatter(NullFormatter())        
 
     class HlogTransform(HasTraits, transforms.Transform):
+        """
+        A class that implements the actual transformation
+        """
+        
         # There are two value members that must be defined.
         # ``input_dims`` and ``output_dims`` specify number of input
         # dimensions and output dimensions to the transformation.
@@ -261,6 +302,10 @@ class MatplotlibHlogScale(HasTraits, matplotlib.scale.ScaleBase):
             return MatplotlibHlogScale.InvertedHlogTransform(b = self.b, range = self.range)
         
     class InvertedLogicleTransform(HasTraits, transforms.Transform):
+        """
+        A class that implements the inverse transformation
+        """
+        
         input_dims = 1
         output_dims = 1
         is_separable = True

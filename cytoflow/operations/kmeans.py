@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.kmeans
 --------------------------
-'''
+
+Use k-means clustering to cluster events in any number of dimensions.
+`kmeans` has three classes:
+
+`KMeansOp` -- the `IOperation` to perform the clustering.
+
+`KMeans1DView` -- a diagnostic view of the clustering (1D, using a histogram)
+
+`KMeans2DView` -- a diagnostic view of the clustering (2D, using a scatterplot)
+"""
 
 
 from traits.api import (HasStrictTraits, Str, Dict, Any, Instance, 
@@ -42,14 +51,14 @@ class KMeansOp(HasStrictTraits):
     """
     Use a K-means clustering algorithm to cluster events.  
     
-    Call :meth:`estimate` to compute the cluster centroids.
+    Call `estimate` to compute the cluster centroids.
       
-    Calling :meth:`apply` creates a new categorical metadata variable 
-    named :attr:`name`, with possible values ``{name}_1`` .... ``name_n`` where 
-    ``n`` is the number of clusters, specified with :attr:`num_clusters`.
+    Calling `apply` creates a new categorical metadata variable 
+    named `name`, with possible values ``{name}_1`` .... ``name_n`` where 
+    ``n`` is the number of clusters, specified with `num_clusters`.
 
     The same model may not be appropriate for different subsets of the data set.
-    If this is the case, you can use the :attr:`by` attribute to specify 
+    If this is the case, you can use the `by` attribute to specify 
     metadata by which to aggregate the data before estimating (and applying) a 
     model.  The  number of clusters is the same across each subset, though.
 
@@ -63,8 +72,8 @@ class KMeansOp(HasStrictTraits):
 
     scale : Dict(Str : {"linear", "logicle", "log"})
         Re-scale the data in the specified channels before fitting.  If a 
-        channel is in :attr:`channels` but not in :attr:`scale`, the current 
-        package-wide default (set with :func:`.set_default_scale`) is used.
+        channel is in `channels` but not in `scale`, the current 
+        package-wide default (set with `set_default_scale`) is used.
     
         .. note::
            Sometimes you may see events labeled ``{name}_None`` -- this results 
@@ -78,7 +87,7 @@ class KMeansOp(HasStrictTraits):
     by : List(Str)
         A list of metadata attributes to aggregate the data before estimating
         the model.  For example, if the experiment has two pieces of metadata,
-        ``Time`` and ``Dox``, setting :attr:`by` to ``["Time", "Dox"]`` will 
+        ``Time`` and ``Dox``, setting `by` to ``["Time", "Dox"]`` will 
         fit the model separately to each subset of the data with a unique 
         combination of ``Time`` and ``Dox``.
   
@@ -159,7 +168,7 @@ class KMeansOp(HasStrictTraits):
         Parameters
         ----------
         experiment : Experiment
-            The :class:`.Experiment` to use to estimate the k-means clusters
+            The `Experiment` to use to estimate the k-means clusters
             
         subset : str (default = None)
             A Python expression that specifies a subset of the data in 
@@ -264,12 +273,12 @@ class KMeansOp(HasStrictTraits):
         Returns
         -------
         Experiment
-            a new Experiment with one additional :attr:`~Experiment.condition` 
-            named :attr:`name`, of type ``category``.  The new category has 
-            values  ``name_1, name_2, etc`` to indicate which k-means cluster 
+            a new Experiment with one additional entry in `Experiment.conditions` 
+            named `name`, of type ``category``.  The new category has 
+            values  ``name_1``, ``name_2``, etc to indicate which k-means cluster 
             an event is a member of.
             
-            The new :class:`.Experiment` also has one new statistic called
+            The new `Experiment` also has one new statistic called
             ``centers``, which is a list of tuples encoding the centroids of each
             k-means cluster.
         """
@@ -405,7 +414,7 @@ class KMeansOp(HasStrictTraits):
          
         Returns
         -------
-            IView : an IView, call :meth:`KMeans1DView.plot` to see the diagnostic plot.
+            IView : an IView, call `KMeans1DView.plot` to see the diagnostic plot.
         """
         channels = kwargs.pop('channels', self.channels)
         scale = kwargs.pop('scale', self.scale)
@@ -453,6 +462,8 @@ class KMeansOp(HasStrictTraits):
 @provides(IView)
 class KMeans1DView(By1DView, AnnotatingView, HistogramView):
     """
+    A diagnostic view for `KMeansOp` (1D, using a histogram)
+    
     Attributes
     ----------    
     op : Instance(KMeansOp)
@@ -517,6 +528,8 @@ class KMeans1DView(By1DView, AnnotatingView, HistogramView):
 @provides(IView)
 class KMeans2DView(By2DView, AnnotatingView, ScatterplotView):
     """
+    A diagnostic view for `KMeansOp` (2D, using a scatterplot).
+    
     Attributes
     ----------
     op : Instance(KMeansOp)

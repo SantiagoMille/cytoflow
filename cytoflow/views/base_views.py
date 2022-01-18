@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,45 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.base_views
 -------------------------
-'''
+
+Base classes for views.
+
+I found, as I wrote a bunch of views, that I was also writing a bunch of shared
+boiler-plate code.  This led to more bugs and a harder-to-maintain codebase.
+So, I extracted the copied code in a short hierarchy of reusable base classes:
+
+`BaseView` -- implements a view with row, column and hue facets.
+After setting up the facet grid, it calls the derived class's 
+``_grid_plot`` to actually do the plotting.  `BaseView.plot` also
+has parameters to set the plot style, legend, axis labels, etc.
+  
+`BaseDataView` -- implements a view that plots an `Experiment`'s
+data (as opposed to a statistic.)  Includes functionality for subsetting
+the data before plotting, and determining axis limits and scales.
+  
+`Base1DView` -- implements a 1-dimensional data view.  See 
+`HistogramView` for an example.
+  
+`Base2DView` -- implements a 2-dimensional data view.  See
+`ScatterplotView` for an example.
+  
+`BaseNDView` -- implements an N-dimensional data view.  See
+`RadvizView` for an example.
+  
+`BaseStatisticsView` -- implements a view that plots a statistic from
+an `Experiment` (as opposed to the underlying data.)  These views
+have a "primary" `BaseStatisticsView.variable`, and can be subset
+as well.
+  
+`Base1DStatisticsView` -- implements a view that plots one dimension
+of a statistic.  See `BarChartView` for an example.
+  
+`Base2DStatisticsView` -- implements a view that plots two dimensions
+of a statistic.  See `Stats2DView` for an example.
+"""
 
 from traits.api import HasStrictTraits, Str, Tuple, List, Dict, provides
 import matplotlib as mpl
@@ -42,18 +77,23 @@ class BaseView(HasStrictTraits):
     
     Attributes
     ----------
-    xfacet, yfacet : String
-        Set to one of the :attr:`~.Experiment.conditions` in the :class:`.Experiment`, and
-        a new row or column of subplots will be added for every unique value
+    xfacet : String
+        Set to one of the `Experiment.conditions` in the `Experiment`, and
+        a new column of subplots will be added for every unique value
+        of that condition.
+        
+    yfacet : String
+        Set to one of the `Experiment.conditions` in the `Experiment`, and
+        a new row of subplots will be added for every unique value
         of that condition.
         
     huefacet : String
-        Set to one of the :attr:`~.Experiment.conditions` in the in the :class:`.Experiment`,
+        Set to one of the `Experiment.conditions` in the in the `Experiment`,
         and a new color will be added to the plot for every unique value of 
         that condition.
         
     huescale : {'linear', 'log', 'logicle'}
-        How should the color scale for :attr:`huefacet` be scaled?
+        How should the color scale for `huefacet` be scaled?
     """
     
     xfacet = Str
@@ -68,13 +108,16 @@ class BaseView(HasStrictTraits):
         Parameters
         ----------
         experiment: Experiment
-            The :class:`.Experiment` to plot using this view.
+            The `Experiment` to plot using this view.
             
         title : str
             Set the plot title
             
-        xlabel, ylabel : str
-            Set the X and Y axis labels
+        xlabel : str
+            Set the X axis label
+        
+        ylabel : str
+            Set the Y axis label
             
         huelabel : str
             Set the label for the hue facet (in the legend)
@@ -82,12 +125,26 @@ class BaseView(HasStrictTraits):
         legend : bool
             Plot a legend for the color or hue facet?  Defaults to `True`.
             
-        sharex, sharey : bool
-            If there are multiple subplots, should they share axes?  Defaults
+        sharex : bool
+            If there are multiple subplots, should they share X axes?  Defaults
+            to `True`.
+            
+        sharey : bool
+            If there are multiple subplots, should they share Y axes?  Defaults
             to `True`.
 
-        row_order, col_order, hue_order : list
-            Override the row/column/hue facet value order with the given list.
+        row_order : list
+            Override the row facet value order with the given list.
+            If a value is not given in the ordering, it is not plotted.
+            Defaults to a "natural ordering" of all the values.
+
+        col_order : list
+            Override the column facet value order with the given list.
+            If a value is not given in the ordering, it is not plotted.
+            Defaults to a "natural ordering" of all the values.
+            
+        hue_order : list
+            Override the hue facet value order with the given list.
             If a value is not given in the ordering, it is not plotted.
             Defaults to a "natural ordering" of all the values.
             
@@ -100,23 +157,23 @@ class BaseView(HasStrictTraits):
         col_wrap : int
             If `xfacet` is set and `yfacet` is not set, you can "wrap" the
             subplots around so that they form a multi-row grid by setting
-            `col_wrap` to the number of columns you want. 
+            this to the number of columns you want. 
             
         sns_style : {"darkgrid", "whitegrid", "dark", "white", "ticks"}
-            Which `seaborn` style to apply to the plot?  Default is `whitegrid`.
+            Which ``seaborn`` style to apply to the plot?  Default is ``whitegrid``.
             
         sns_context : {"paper", "notebook", "talk", "poster"}
-            Which `seaborn` context to use?  Controls the scaling of plot 
-            elements such as tick labels and the legend.  Default is `talk`.
+            Which ``seaborn`` context to use?  Controls the scaling of plot 
+            elements such as tick labels and the legend.  Default is ``talk``.
             
         palette : palette name, list, or dict
             Colors to use for the different levels of the hue variable. 
             Should be something that can be interpreted by
-            :func:`seaborn.color_palette`, or a dictionary mapping hue levels to 
+            `seaborn.color_palette`, or a dictionary mapping hue levels to 
             matplotlib colors.
             
         despine : Bool
-            Remove the top and right axes from the plot?  Default is `True`.
+            Remove the top and right axes from the plot?  Default is ``True``.
 
         Other Parameters
         ----------------
@@ -317,7 +374,7 @@ class BaseDataView(BaseView):
     ----------
     subset : str
         An expression that specifies the subset of the statistic to plot.
-        Passed unmodified to :meth:`pandas.DataFrame.query`.
+        Passed unmodified to `pandas.DataFrame.query`.
     """
 
     subset = Str
@@ -494,14 +551,17 @@ class Base2DView(BaseDataView):
     
     Attributes
     ----------
-    xchannel, ychannel : Str
-        The channels to view
+    xchannel : Str
+        The channel to view on the X axis
+    
+    ychannel : Str
+        The channel to view on the Y axis
         
-    xscale, yscale : {'linear', 'log', 'logicle'} (default = 'linear')
-        The scales applied to the data before plotting it.
+    xscale : {'linear', 'log', 'logicle'} (default = 'linear')
+        The scales applied to the `xchannel` data before plotting it.
         
-    xlim, ylim : (float, float)
-        Set the min and max limits of the plots' x and y axes.
+    yscale : {'linear', 'log', 'logicle'} (default = 'linear')
+        The scales applied to the `ychannel` data before plotting it.
     """
     
     xchannel = Str
@@ -513,8 +573,11 @@ class Base2DView(BaseDataView):
         """
         Parameters
         ----------  
-        xlim, ylim : (float, float)
-            Set the range of the plot's axis.
+        xlim : (float, float)
+            Set the range of the plot's X axis.
+            
+        ylim : (float, float)
+            Set the range of the plot's Y axis.
         """
 
         if experiment is None:
@@ -641,7 +704,7 @@ class BaseStatisticsView(BaseView):
         
     subset : str
         An expression that specifies the subset of the statistic to plot.
-        Passed unmodified to :meth:`pandas.DataFrame.query`.
+        Passed unmodified to `pandas.DataFrame.query`.
 
     """
     
@@ -656,7 +719,7 @@ class BaseStatisticsView(BaseView):
         -------
         iterator
             An iterator across the possible plot names. The iterator ALSO has an instance
-            attribute called :attribute::`by`, which holds a list of the facets that are
+            attribute called ``by``, which holds a list of the facets that are
             not yet set (and thus need to be specified in the plot name.)
         """
         
@@ -712,9 +775,9 @@ class BaseStatisticsView(BaseView):
         Parameters
         ----------
         plot_name : str
-            If this :class:`IView` can make multiple plots, ``plot_name`` is
+            If this `IView` can make multiple plots, ``plot_name`` is
             the name of the plot to make.  Must be one of the values retrieved
-            from :meth:`enum_plots`.
+            from `enum_plots`.
 
         """
         
@@ -820,19 +883,19 @@ class BaseStatisticsView(BaseView):
 
 class Base1DStatisticsView(BaseStatisticsView):
     """
-    The base class for 1-dimensional statistic views -- ie, the :attr:`variable`
+    The base class for 1-dimensional statistic views -- ie, the `variable`
     attribute is on the x axis, and the statistic value is on the y axis.
     
     Attributes
     ----------
     statistic : (str, str)
         The name of the statistic to plot.  Must be a key in the  
-        :attr:`~Experiment.statistics` attribute of the :class:`~.Experiment`
+        `Experiment.statistics` attribute of the `Experiment`
         being plotted.
         
     error_statistic : (str, str)
         The name of the statistic used to plot error bars.  Must be a key in the
-        :attr:`~Experiment.statistics` attribute of the :class:`~.Experiment`
+        `Experiment.statistics` attribute of the `Experiment`
         being plotted.
         
     scale : {'linear', 'log', 'logicle'}
@@ -947,24 +1010,37 @@ class Base1DStatisticsView(BaseStatisticsView):
 
 class Base2DStatisticsView(BaseStatisticsView):
     """
-    The base class for 2-dimensional statistic views -- ie, the :attr:`variable`
+    The base class for 2-dimensional statistic views -- ie, the `variable`
     attribute varies independently, and the corresponding values from the x and
     y statistics are plotted on the x and y axes.
     
     Attributes
     ----------
-    xstatistic, ystatistic : (str, str)
-        The name of the statistics to plot.  Must be a keys in the  
-        :attr:`~Experiment.statistics` attribute of the :class:`~.Experiment`
+    xstatistic : (str, str)
+        The name of the statistic to plot on the X axis.  Must be a key in the  
+        `Experiment.statistics` attribute of the `Experiment`
         being plotted.
         
-    x_error_statistic, y_error_statistic : (str, str)
-        The name of the statistics used to plot error bars.  Must be keys in the
-        :attr:`~Experiment.statistics` attribute of the :class:`~.Experiment`
+    ystatistic : (str, str)
+        The name of the statistic to plot on the Y axis.  Must be a key in the  
+        `Experiment.statistics` attribute of the `Experiment`
         being plotted.
         
-    xscale, yscale : {'linear', 'log', 'logicle'}
-        The scales applied to the data before plotting it.
+    x_error_statistic : (str, str)
+        The name of the statistic used to plot error bars on the X axis.  
+        Must be a key in the `Experiment.statistics` attribute of the `Experiment`
+        being plotted.
+        
+    y_error_statistic : (str, str)
+        The name of the statistic used to plot error bars on the Y axis.  
+        Must be a key in the `Experiment.statistics` attribute of the `Experiment`
+        being plotted.
+        
+    xscale : {'linear', 'log', 'logicle'}
+        The scale applied to `xstatistic` before plotting it.
+        
+    yscale : {'linear', 'log', 'logicle'}
+        The scale applied to `ystatistic` before plotting it.
     """
     
     xstatistic = Tuple(Str, Str)
@@ -986,9 +1062,11 @@ class Base2DStatisticsView(BaseStatisticsView):
         """
         Parameters
         ----------
-        xlim, ylim : (float, float)
-            Set the range of the plot's axis.
+        xlim : (float, float)
+            Set the range of the plot's X axis.
             
+        ylim : (float, float)
+            Set the range of the plot's Y axis.
         """
         if experiment is None:
             raise util.CytoflowViewError('experiment',

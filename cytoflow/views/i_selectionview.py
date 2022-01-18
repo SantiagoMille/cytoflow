@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.i_selectionview
 ------------------------------
-'''
+
+`ISelectionView` -- a decorator that lets you add selections to an `IView`.
+"""
 
 from traits.api import Bool
 from .i_view import IView
@@ -28,7 +30,7 @@ from .i_view import IView
 class ISelectionView(IView):
     """A decorator that lets you add (possibly interactive) selections to an IView.
     
-    Note that this is a Decorator *design pattern*, not a Python `@decorator`.
+    Note that this is a Decorator *design pattern*, not a Python ``@decorator``.
     
     Attributes
     ----------

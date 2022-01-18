@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,9 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+cytoflowgui.workflow.operations.range2d
+---------------------------------------
+
+"""
+
 from traits.api import provides, Instance, Str, Property, Tuple, observe
 
-from cytoflow.operations.range2d import Range2DOp, RangeSelection2D
+from cytoflow.operations.range2d import Range2DOp, ScatterplotRangeSelection2DView
 import cytoflow.utility as util
 
 from ..views import IWorkflowView, WorkflowView, ScatterplotPlotParams
@@ -30,7 +36,7 @@ from .operation_base import IWorkflowOperation, WorkflowOperation
 Range2DOp.__repr__ = traits_repr
 
 @provides(IWorkflowView)
-class Range2DSelectionView(WorkflowView, RangeSelection2D):
+class Range2DSelectionView(WorkflowView, ScatterplotRangeSelection2DView):
     op = Instance(IWorkflowOperation, fixed = True)
     plot_params = Instance(ScatterplotPlotParams, ())
     
@@ -76,9 +82,13 @@ class Range2DSelectionView(WorkflowView, RangeSelection2D):
 
     def _get_yhigh(self):
         return self._range[3]
+    
+    def clear_estimate(self):
+        # no-op
+        return
         
     def get_notebook_code(self, idx):
-        view = RangeSelection2D()
+        view = ScatterplotRangeSelection2DView()
         view.copy_traits(self, view.copyable_trait_names())
         plot_params_str = traits_str(self.plot_params)
         

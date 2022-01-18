@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ Created on Nov 16, 2015
 '''
 import unittest
 import cytoflow as flow
+import pandas as pd
 
 class Test(unittest.TestCase):
 
@@ -49,6 +50,8 @@ class Test(unittest.TestCase):
         
         with self.assertRaises(ValueError):
             self.assertFalse((self.ex.data == ex2.data).all().all())
+            
+        self.assertIsInstance(ex2.data.index, pd.RangeIndex)
     
     def test_plot(self):
         self.op.default_view().plot(self.ex)

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.histogram
 ------------------------
-'''
+
+Plots a histogram.
+
+`HistogramView` -- the `IView` class that makes the plot.
+"""
 
 from traits.api import Constant, provides
 import matplotlib.pyplot as plt
@@ -82,7 +86,7 @@ class HistogramView(Base1DView):
             The number of bins to plot in the histogram.  Clipped to [100, 1000]
             
         histtype : {'stepfilled', 'step', 'bar'}
-            The type of histogram to draw.  `stepfilled` is the default, which
+            The type of histogram to draw.  ``stepfilled`` is the default, which
             is a line plot with a color filled under the curve.
             
         density: bool
@@ -90,9 +94,9 @@ class HistogramView(Base1DView):
             function, so the area under the histogram is 1.
             
         orientation : {'horizontal', 'vertical'}
-            The orientation of the histogram.  `horizontal` gives a histogram
+            The orientation of the histogram.  ``horizontal`` gives a histogram
             with the intensity on the Y axis and the count on the X axis;
-            default is `vertical`.
+            default is ``vertical``.
         
         linewidth : float
             The width of the histogram line (in points)

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,10 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 cytoflow.operations.ratio
 -------------------------
-'''
+
+Creates a new "channel" that is the ratio of the measurements in two other
+channels.  `ratio` has one class:
+
+`RatioOp` -- applies the operation.
+"""
 
 import numpy as np
 
@@ -66,8 +71,8 @@ class RatioOp(HasStrictTraits):
         
         Parameters
         ----------
-        experiment : Experiment
-            the old experiment to which this op is applied
+        experiment : `Experiment`
+            the `Experiment` to which this operation is applied
             
         Returns
         -------

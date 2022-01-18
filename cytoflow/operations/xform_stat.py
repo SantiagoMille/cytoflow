@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.xform_stat
 ------------------------------
-'''
+
+Transforms a statistic. `xform_stat` has one class:
+
+`TransformStatisticOp` -- apply a function to a statistic, making a new statistic.
+"""
 
 from warnings import warn
 import pandas as pd
@@ -38,12 +42,12 @@ class TransformStatisticOp(HasStrictTraits):
     """
     Apply a function to a statistic, creating a new statistic.  The function can
     be applied to the entire statistic, or it can be applied individually to 
-    groups of the statistic.  The function should take a :class:`pandas.Series` 
+    groups of the statistic.  The function should take a `pandas.Series` 
     as its only argument.  Return type is arbitrary, but a to be used with the 
-    rest of :class:`cytoflow` it should probably be a numeric type or an 
+    rest of `cytoflow` it should probably be a numeric type or an 
     iterable of numeric types.
     
-    As a special case, if the function returns a :class:`pandas.Series` *with 
+    As a special case, if the function returns a `pandas.Series` *with 
     the same index that it was passed*, it is interpreted as a transformation.  
     The resulting statistic will have the same length, index names and index 
     levels as the original statistic.
@@ -52,28 +56,28 @@ class TransformStatisticOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Becomes the first element in the
-        :attr:`~Experiment.statistics` key tuple.
+        `Experiment.statistics` key tuple.
     
     statistic : Tuple(Str, Str)
         The statistic to apply the function to.
         
     function : Callable
-        The function used to transform the statistic.  :attr:`function` must 
-        take a :class:`pandas.Series` as its only parameter.  The return type is 
-        arbitrary, but to work with the rest of :class:`cytoflow` it should 
+        The function used to transform the statistic.  `function` must 
+        take a `pandas.Series` as its only parameter.  The return type is 
+        arbitrary, but to work with the rest of `cytoflow` it should 
         probably be a numeric type or an iterable of numeric types..  If 
-        :attr:`statistic_name` is unset, the name of the function becomes the 
-        second in element in the :attr:`~Experiment.statistics` key tuple.
+        `statistic_name` is unset, the name of the function becomes the 
+        second in element in the `Experiment.statistics` key tuple.
         
     statistic_name : Str
         The name of the function; if present, becomes the second element in
-        the :attr:`~Experiment.statistics` key tuple.
+        the `Experiment.statistics` key tuple.
         
     by : List(Str)
         A list of metadata attributes to aggregate the input statistic before 
         applying the function.  For example, if the statistic has two indices
         ``Time`` and ``Dox``, setting ``by = ["Time", "Dox"]`` will apply 
-        :attr:`function` separately to each subset of the data with a unique 
+        `function` separately to each subset of the data with a unique 
         combination of ``Time`` and ``Dox``.
         
     fill : Any (default = 0)
@@ -105,19 +109,19 @@ class TransformStatisticOp(HasStrictTraits):
 
     def apply(self, experiment):
         """
-        Applies :attr:`function` to a statistic.
+        Applies `function` to a statistic.
         
         Parameters
         ----------
-        experiment : Experiment
-            The experiment to apply the operation to
+        experiment : `Experiment`
+            The `Experiment` to apply the operation to
         
         Returns
         -------
         Experiment
             The same as the old experiment, but with a new statistic that
-            results from applying :attr:`function` to the statistic specified
-            in :attr:`statistic`.
+            results from applying `function` to the statistic specified
+            in `statistic`.
         """
         
         if experiment is None:

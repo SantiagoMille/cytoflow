@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,17 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.view_plugins
+----------------------
+
+`envisage.plugin.Plugin` classes and GUI `traitsui.handler.Controller` classes to adapt modules from  
+`cytoflowgui.workflow.views` to the Qt / `traitsui` GUI.
+
+The module docstrings are also the ones that are used for the GUI help
+panel.
+"""
 
 from .i_view_plugin import IViewPlugin, ViewPluginManager, VIEW_PLUGIN_EXT
 from .view_plugin_base import ViewHandler

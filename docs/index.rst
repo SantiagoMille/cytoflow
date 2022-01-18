@@ -1,6 +1,9 @@
 Cytoflow: Better quantitative flow cytometry.
 =============================================
 
+.. image:: hero.png
+   :align: center
+
 Cytoflow is a **point-and click program** and a **Python library** for
 analyzing flow cytometry data.  It was written by Brian Teague to address
 shortcomings in currently-available flow software.
@@ -24,7 +27,7 @@ How is Cytoflow different?
   workflows.  The library was designed to work particularly well in a 
   `Jupyter notebook <https://jupyter.org/>`_.  
 * Cytoflow is **free and open-source.**  Contribute bug reports at the 
-  `GitHub project page <https://github.com/bpteague/cytoflow>`_
+  `GitHub project page <https://github.com/cytoflow/cytoflow>`_
   or download the source code to modify it for your own needs.  Then,
   contribute your changes back so the rest of the community can benefit from
   them.
@@ -84,6 +87,7 @@ you'll find:
 
 * :ref:`Tutorial Jupyter notebooks <dev_tutorials>` to get you started
   writing your own analyses.
+* :ref:`In-depth examples <dev_examples>` that demonstrate more advanced usage.
 * :ref:`How-to guides <dev_howto>` to help you with common tasks.
 * :ref:`Developer's guides <dev_guides>` to help you understand how Cytoflow
   is structured (particularly useful for writing your own modules.)

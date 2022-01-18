@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ extensions = [
 
 # autodoc options
 autodoc_member_order = 'bysource'
-autodoc_mock_imports = ['traitsui.qt4']
+autodoc_mock_imports = ['traitsui', 'pyface']
 
 # napoleon options
 napoleon_use_param = False
@@ -106,10 +106,6 @@ import time
 copyright = u'Massachusetts Institute of Technology 2015-2018, Brian Teague 2018-{}'.format(time.strftime("%Y"))
 
 # Configure the sidebar
-
-# # Configure the footer
-# if tags.has("embedded_help"):  # @UndefinedVariable
-#     templates_path = ['embedded_templates']
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

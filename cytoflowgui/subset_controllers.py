@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+cytoflowgui.subset_controllers
+------------------------------
+
+Instances of `traitsui.handler.Controller` for the various `ISubset` classes.
+These contain the `traitsui.view.View`\s for them.  Also a utility function
+to return the appropriate handler for an arbitrary `ISubset` model.
+"""
+
 from traitsui.api import Controller, View, HGroup, Item, CheckListEditor
 
 from .editors import ValuesBoundsEditor
@@ -24,6 +33,7 @@ from .editors import ValuesBoundsEditor
 from cytoflowgui.workflow.subset import BoolSubset, CategorySubset, RangeSubset
 
 class BoolSubsetHandler(Controller):
+    """Controller for `BoolSubset`"""
     
     def subset_view(self):
         return View(HGroup(Item('selected_t',
@@ -33,6 +43,7 @@ class BoolSubsetHandler(Controller):
         
         
 class CategorySubsetHandler(Controller):
+    """Controller for `CategorySubset`"""
     
     def subset_view(self):
         return View(Item('selected',
@@ -43,6 +54,7 @@ class CategorySubsetHandler(Controller):
         
         
 class RangeSubsetHandler(Controller):
+    """Controller for `RangeSubset`"""
     
     def subset_view(self):
         return View(Item('high',
@@ -56,6 +68,11 @@ class RangeSubsetHandler(Controller):
         
         
 def subset_handler_factory(model):
+    """
+    A factory method to produce the right handler for a given 
+    implementation of `ISubset`
+    """
+    
     if isinstance(model, BoolSubset):
         return BoolSubsetHandler(model)
     elif isinstance(model, CategorySubset):

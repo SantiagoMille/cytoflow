@@ -15,6 +15,7 @@ more advanced analyses.
    
    quickstart
    dose_response
+   machine_learning
    
    
 **Advanced tutorials**
@@ -23,13 +24,15 @@ more advanced analyses.
    :maxdepth: 2
    
    induction
+   kiani
+   repressor
    
 ..
   Basic
   -----
   Quick start
-  Basic Statistics
   Yeast dose-response
+  Machine learning
   
   
 ..

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,6 +20,10 @@
 """
 cytoflow.views.histogram_2d
 ---------------------------
+
+Plot a 2D histogram.
+
+`Histogram2DView` -- the `IView` class that makes the plot.
 """
 
 from traits.api import provides
@@ -103,7 +107,7 @@ class Histogram2DView(Base2DView):
             
         Notes
         -----
-        Other `kwargs` are passed to `matplotlib.axes.Axes.pcolormesh <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.pcolormesh.html>`_
+        Other ``kwargs`` are passed to `matplotlib.axes.Axes.pcolormesh`
     
         """
         

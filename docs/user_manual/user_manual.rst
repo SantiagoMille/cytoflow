@@ -18,7 +18,9 @@ The **User Manual** is divided into four sections:
    
       tutorials/quickstart
       tutorials/dose_response
+      tutorials/machine_learning
       tutorials/induction
+      tutorials/kiani
       
 #. :ref:`HOWTOs <user_howto>` are "recipes" -- step-by-step guides to 
    accomplish a particular task.  They are a little higher-level than 
@@ -48,6 +50,7 @@ The **User Manual** is divided into four sections:
       guides/mean
       guides/statistics
       guides/facets
+      guides/browser
       
 #. :ref:`Reference documents <user_reference>` for each operation and
    view in Cytoflow.  These are the same documents that appear in the

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on Oct 2, 2015
+"""
+cytoflowgui.editors.color_text_editor
+-------------------------------------
 
-@author: brian
-'''
+A `traitsui.editors.text_editor.TextEditor`
+that allows you to set the foreground and background color
+of the text.
+"""
 
 from pyface.qt import QtGui, QtCore
 from traitsui.qt4.editor_factory import ReadonlyEditor
@@ -29,8 +32,6 @@ from traitsui.api import BasicEditorFactory
 from traits.api import Color, Instance, Str, Undefined
 
 class _ColorTextEditor(ReadonlyEditor):
-    """ Read-only style of text editor, which displays a read-only text field.
-    """
 
     _palette = Instance(QtGui.QPalette)
     _foreground_color = Color
@@ -68,8 +69,9 @@ class _ColorTextEditor(ReadonlyEditor):
     #---------------------------------------------------------------------------
 
     def update_editor ( self ):
-        """ Updates the editor when the object trait changes externally to the
-            editor.
+        """ 
+        Updates the editor when the object trait changes externally to the
+        editor.
         """
         self.control.setText(self.str_value)
         
@@ -83,6 +85,14 @@ class _ColorTextEditor(ReadonlyEditor):
         
 # editor factory
 class ColorTextEditor(BasicEditorFactory):
+    """
+    Editor factory for a color text editor
+    """
+    
     klass = _ColorTextEditor
+    
     foreground_color = Str
+    """The foreground color"""
+    
     background_color = Str
+    """The background color"""

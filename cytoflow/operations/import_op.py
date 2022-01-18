@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,13 +20,29 @@
 '''
 cytoflow.operations.import_op
 -----------------------------
+
+`import_op` has two classes:
+
+`Tube` -- represents a tube in a flow cytometry experiment -- an FCS file name
+and a dictionary of experimental conditions.
+
+`ImportOp` -- the operation that actually creates a new `Experiment` from a list
+of `Tube`.
+
+There are a few utility functions as well:
+
+  - `parse_tube` -- parse an FCS file.
+
+  - `check_tube` -- checks an FCS file's parameters against an `Experiment`.
+  
+  - `autodetect_name_metadata` -- see if ``$PnN`` or ``$PnS`` has the channel names
 '''
 
 import warnings, math
 from traits.api import (HasTraits, HasStrictTraits, provides, Str, List, Any,
                         Dict, File, Constant, Enum, Int)
 
-import fcsparser
+from fcsparser import fcsparser
 import numpy as np
 from pathlib import Path
 
@@ -34,45 +50,6 @@ import cytoflow.utility as util
 
 from ..experiment import Experiment
 from .i_operation import IOperation
-
-# override fcsparser's broken fromfile
-import numpy
-def _fromfile(file, dtype, count, *args, **kwargs):
-
-    dtypes = dtype.split(',')
-    field_width = []
-    
-    for dt in dtypes:
-        num_bytes = int(dt[2:])
-        field_width.append(num_bytes)
-        
-    try:
-        ret = numpy.fromfile(file, 
-                             dtype=",".join(['u1'] * sum(field_width)), 
-                             count=count, 
-                             *args, 
-                             **kwargs)
-    except (TypeError, IOError):
-        ret = numpy.frombuffer(file.read(count * sum(field_width)),
-                               dtype=",".join(['u1'] * sum(field_width)), 
-                               count=count, 
-                               *args, 
-                               **kwargs)
-
-    ret = ret.view('u1').reshape((count, sum(field_width)))
-    ret_dtypes = []
-    for field, dt in enumerate(dtypes):
-        dtype_type = dt[1]
-        dtype_endian = dt[0]
-        num_bytes = int(dt[2:])
-        while num_bytes & (num_bytes - 1) != 0:
-            ret = np.insert(ret, sum(field_width[0:field]), np.zeros(count), axis = 1)
-            num_bytes = num_bytes + 1
-        ret_dtypes.append(dtype_endian + dtype_type + str(num_bytes))
-
-    return ret.view(','.join(ret_dtypes)).ravel()
-    
-fcsparser.api.fromfile = _fromfile
 
 
 class Tube(HasTraits):
@@ -116,20 +93,20 @@ class Tube(HasTraits):
 @provides(IOperation)
 class ImportOp(HasStrictTraits):
     """
-    An operation for importing data and making an :class:`.Experiment`.
+    An operation for importing data and making an `Experiment`.
     
-    To use, set the :attr:`conditions` dict to a mapping between condition name 
+    To use, set the `conditions` dict to a mapping between condition name 
     and NumPy ``dtype``.  Useful dtypes include ``category``, ``float``, 
     ``int``, ``bool``.
     
-    Next, set :attr:`tubes` to a list of :class:`Tube` containing FCS filenames 
+    Next, set `tubes` to a list of `Tube` containing FCS filenames 
     and the corresponding conditions.
     
     If you would rather not analyze every single event in every FCS file,
-    set :attr:`events` to the number of events from each FCS file you want to 
+    set `events` to the number of events from each FCS file you want to 
     load.
     
-    Call :meth:`apply` to load the data.  The usual ``experiment`` parameter
+    Call `apply` to load the data.  The usual ``experiment`` parameter
     can be ``None``.
     
     Attributes
@@ -139,10 +116,10 @@ class ImportOp(HasStrictTraits):
         Useful ``dtype``s include ``category``, ``float``, ``int``, and ``bool``.
         
     tubes : List(Tube)
-        A list of :class:``Tube`` instances, which map FCS files to their corresponding
-        experimental conditions.  Each :class:``Tube`` must have a 
-        :attr:``~Tube.conditions`` dict whose keys match those of 
-        :attr:`conditions`.
+        A list of ``Tube`` instances, which map FCS files to their corresponding
+        experimental conditions.  Each ``Tube`` must have a 
+        ``Tube.conditions`` dict whose keys match those of 
+        `conditions`.
         
     channels : Dict(Str, Str)
         If you only need a subset of the channels available in the data set,
@@ -152,13 +129,13 @@ class ImportOp(HasStrictTraits):
         You can use this to rename channels as you import data (because flow
         channel names are frequently not terribly informative.)  New channel
         names must be valid Python identifiers: start with a letter or ``_``, and
-        all characters must be letters, numbers or ``_``.  If :attr:`channels` is
+        all characters must be letters, numbers or ``_``.  If `channels` is
         empty, load all channels in the FCS files.
         
     events : Int
-        If not None, import only a random subset of events of size :attr:`events`. 
+        If not None, import only a random subset of events of size `events`. 
         Presumably the analysis will go faster but less precisely; good for
-        interactive data exploration.  Then, unset :attr:`events` and re-run
+        interactive data exploration.  Then, unset `events` and re-run
         the analysis non-interactively.
         
     name_metadata : {None, "$PnN", "$PnS"} (default = None)
@@ -170,21 +147,21 @@ class ImportOp(HasStrictTraits):
         FCS file.  Some software (such as the Beckman-Coulter software)
         also encode the same data in two different formats -- for example,
         FCS2.0 and FCS3.0.  To access a data set other than the first one,
-        set :attr:`data_set` to the 0-based index of the data set you
+        set `data_set` to the 0-based index of the data set you
         would like to use.  This will be used for *all FCS files imported by
         this operation.*
             
     ignore_v : List(Str)
-        :class:`cytoflow` is designed to operate on an :class:`.Experiment` containing
+        `cytoflow` is designed to operate on an `Experiment` containing
         tubes that were all collected under the same instrument settings.
         In particular, the same PMT voltages ensure that data can be
         compared across samples.
         
-        *Very rarely*, you may need to set up an :class:`.Experiment` with 
-        different voltage settings on different :class:`Tube`s.  This is likely 
+        *Very rarely*, you may need to set up an `Experiment` with 
+        different voltage settings on different `Tube` instances.  This is likely 
         only to be the case when you are trying to figure out which voltages 
-        should be used in future experiments.  If so, set :attr:`ignore_v` to a 
-        :class:`List` of channel names to ignore particular channels.  
+        should be used in future experiments.  If so, set `ignore_v` to a 
+        list of channel names to ignore particular channels.  
         
         .. warning::
         
@@ -226,7 +203,7 @@ class ImportOp(HasStrictTraits):
       
     def apply(self, experiment = None, metadata_only = False):
         """
-        Load a new :class:`.Experiment`.  
+        Load a new `Experiment`.  
         
         Parameters
         ----------
@@ -240,7 +217,7 @@ class ImportOp(HasStrictTraits):
         Returns
         -------
         Experiment
-            The new :class:`.Experiment`.  New channels have the following
+            The new `Experiment`.  New channels have the following
             metadata:
             
             - **voltage** - int
@@ -256,8 +233,8 @@ class ImportOp(HasStrictTraits):
             ``True``, to distinguish the experimental variables from the
             conditions that were added by gates, etc.
             
-            If :attr:`ignore_v` is set, it is added as a key to the 
-            :class:`.Experiment`-wide metadata.
+            If `ignore_v` is set, it is added as a key to the 
+            `Experiment`-wide metadata.
             
         """
         
@@ -408,17 +385,9 @@ class ImportOp(HasStrictTraits):
             tube_meta['CF_File'] = Path(tube.file).stem
                              
             experiment.metadata['fcs_metadata'][tube.file] = tube_meta
-                        
+            
+        # take care of strange encodings
         for channel in channels:
-            if self.channels and channel in self.channels:
-                new_name = self.channels[channel]
-                if channel == new_name:
-                    continue
-                experiment.data.rename(columns = {channel : new_name}, inplace = True)
-                experiment.metadata[new_name] = experiment.metadata[channel]
-                experiment.metadata[new_name]["fcs_name"] = channel
-                del experiment.metadata[channel]
-              
             # this catches an odd corner case where some instruments store
             # instrument-specific info in the "extra" bits.  we have to
             # clear them out.
@@ -453,13 +422,48 @@ class ImportOp(HasStrictTraits):
                 warnings.warn('Converting channel {} from logarithmic to linear'
                               .format(channel),
                               util.CytoflowWarning)
-#                 experiment.data[channel] = 10 ** (f1 * experiment.data[channel] / data_range) * f2
+                experiment.data[channel] = 10 ** (f1 * experiment.data[channel] / data_range) * f2
 
+
+        # rename channels if necessary                     
+        for channel in channels:
+            if self.channels and channel in self.channels:
+                new_name = self.channels[channel]
+                if channel == new_name:
+                    continue
+                experiment.data.rename(columns = {channel : new_name}, inplace = True)
+                experiment.metadata[new_name] = experiment.metadata[channel]
+                experiment.metadata[new_name]["fcs_name"] = channel
+                del experiment.metadata[channel]
 
         return experiment
 
 
 def check_tube(filename, experiment, data_set = 0):
+    """
+    Check to see if an FCS file can be parsed, and that the tube's parameters 
+    are the same as those already in the `Experiment`.  If not, raises `CytoflowError`.
+    At the moment, only checks $PnV, the detector voltages.
+    
+    Parameters
+    ----------
+    filename : string
+        An FCS filename
+        
+    experiment : `Experiment`
+        The `Experiment` to check ``filename`` against.
+        
+    data_set : int (optional, default = 0)
+        The FCS standard allows for multiple data sets; ``data_set`` 
+        specifies which one to check.
+        
+    Raises
+    ------
+    `CytoflowError`
+        If the FCS file can't be read, or if the voltages in ``filename`` are
+        different than those in ``experiment``.
+        
+    """
     
     if experiment is None:
         raise util.CytoflowError("No experiment specified")
@@ -499,13 +503,30 @@ def check_tube(filename, experiment, data_set = 0):
             new_v = tube_channels.loc[fcs_name]['$PnV']
             
             if old_v != new_v and not channel in ignore_v:
-                raise util.CytoflowError("Tube {0} doesn't have the same voltages as the rest of the experiment"
-                                    .format(filename))
+                raise util.CytoflowError("Tube {0}, channel {1} doesn't have the same voltages as the rest of the experiment"
+                                    .format(filename, channel))
 
         # TODO check the delay -- and any other params?
         
 def autodetect_name_metadata(filename, data_set = 0):
-
+    """
+    Tries to determine whether the channel names should come from
+    $PnN or $PnS.
+    
+    Parameters
+    ----------
+    filename : string
+        The name of the FCS file to operate on
+        
+    data_set : int (optional, default = 0)
+        Which data set in the FCS file to operate on
+        
+    Returns
+    -------
+    The name of the parameter to parse channel names from, 
+    either "$PnN" or "$PnS"
+    
+    """
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -551,7 +572,36 @@ def autodetect_name_metadata(filename, data_set = 0):
 
 # module-level, so we can reuse it in other modules
 def parse_tube(filename, experiment = None, data_set = 0, metadata_only = False):   
+    """
+    Parses an FCS file.  A thin wrapper over ``fcsparser.parse``.
+    
+    Parameters
+    ----------
+    filename : string
+        The file to parse.
         
+    experiment : `Experiment` (optional, default: None)
+        If provided, check the tube's parameters against this experiment
+        first.
+        
+    data_set : int (optional, default: 0)
+        Which data set in the FCS file to parse?
+        
+    metadata_only : bool (optional, default: False)
+        If ``True``, only parse the metadata.  Because this is at the beginning
+        of the FCS file, this happens much faster than parsing the entire file.
+        
+    Returns
+    -------
+    tube_metadata : dict
+        The metadata from the FCS file
+        
+    tube_data : `pandas.DataFrame` 
+        The actual tabular data from the FCS file.  Each row is an event, and
+        each column is a channel.
+        
+    """
+    
     if experiment:
         check_tube(filename, experiment)
         name_metadata = experiment.metadata["name_metadata"]

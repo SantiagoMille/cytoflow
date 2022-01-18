@@ -65,6 +65,11 @@ The base operation API is fairly simple:
   .. note:: Be aware of the ``deep`` parameter for :meth:`~.Experiment.clone`!  It
             defaults to ``True`` -- **only** set it to ``False`` if you are only
             adding columns to the :class:`~.Experiment`.
+            
+  .. note:: The resulting :class:`.Experiment` must have a `pandas.RangeIndex` for its
+            index -- several modules rely on this!  If you add or remove events from 
+            the `Experiment`, make sure you call `pandas.DataFrame.reset_index` on 
+            `Experiment.data` to make the index monotonic again.
   
 * :meth:`~.IOperation.estimate` - You may also wish to estimate 
   the operation's parameters from a data set. Crucially, this 
@@ -188,7 +193,7 @@ least five things:
   and should be placed in :mod:`cytoflowgui.op_plugins`.
   
 * A plugin class derived from :class:`envisage.plugin.Plugin` and implementing 
-  :class:`.IOperationPlugin`.  It should also derive from :class:`.PluginHelpMixin`, 
+  :class:`IOperationPlugin`.  It should also derive from :class:`cytoflowgui.op_plugins.op_plugin_base.PluginHelpMixin`, 
   which adds support for online help.
   
 * Tests.  Because of :mod:`cytoflowgui`'s split between processes, testing
@@ -233,7 +238,7 @@ A new view operation requires at least five things:
   and should be placed in :mod:`cytoflowgui.view_plugins`.
 
 * A plugin class derived from :class:`envisage.plugin.Plugin` and implementing 
-  :class:`.IViewPlugin`.  It should also derive from :class:`.PluginHelpMixin`, 
+  :class:`IViewPlugin`.  It should also derive from :class:`cytoflowgui.view_plugins.view_plugin_base.PluginHelpMixin,`, 
   which adds support for online help.
   
 * Plot parameters.  The parameters to a view's :meth:`plot` method are stored

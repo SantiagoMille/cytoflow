@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,16 +17,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.range
 -------------------------
-'''
+
+Applies a (1D) range gate to an `Experiment`. `range` has two classes:
+
+`RangeOp` -- Applies the gate, given a pair of thresholds
+
+`RangeSelection` -- an `IView` that allows you to view the range and/or
+interactively set the thresholds.
+"""
 
 from traits.api import (HasStrictTraits, Float, Str, Instance, Bool, 
-                        provides, on_trait_change, Any, Constant)
+                        provides, observe, Any, Constant, Dict)
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D    
+from matplotlib.widgets import SpanSelector
 
 import cytoflow.utility as util
 from cytoflow.views import HistogramView, ISelectionView
@@ -43,7 +51,7 @@ class RangeOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Used to name the new metadata field in the
-        experiment that's created by :meth:`apply`
+        experiment that's created by `apply`
         
     channel : Str
         The name of the channel to apply the range gate.
@@ -126,20 +134,21 @@ class RangeOp(HasStrictTraits):
     _selection_view = Instance('RangeSelection', transient = True)
         
     def apply(self, experiment):
-        """Applies the range gate to an experiment.
+        """
+        Applies the range gate to an experiment.
         
         Parameters
         ----------
-        experiment : Experiment
-            the old_experiment to which this op is applied
+        experiment : `Experiment`
+            the `Experiment` to which this op is applied
             
         Returns
         -------
         Experiment
-            a new experiment, the same as old :class:`~Experiment` but with a new
+            a new    `Experiment`, the same as old `Experiment` but with a new
             column of type ``bool`` with the same as the operation name.  The 
-            bool is ``True`` if the event's measurement in :attr:`channel` is 
-            greater than :attr:`low` and less than :attr:`high`; it is ``False`` 
+            bool is ``True`` if the event's measurement in `channel` is 
+            greater than `low` and less than `high`; it is ``False`` 
             otherwise.
         """
 
@@ -208,23 +217,17 @@ class RangeSelection(Op1DView, HistogramView):
     """
     Plots, and lets the user interact with, a selection on the X axis.
     
-    
     Attributes
     ----------
-        
+
     interactive : Bool
         is this view interactive?  Ie, can the user set min and max
         with a mouse drag?
         
-    Notes
-    -----
-    We inherit :attr:`xfacet` and :attr:`yfacet` from `cytoflow.views.HistogramView`, but
-    they must both be unset!
-        
     Examples
     --------
     
-    In an IPython notebook with `%matplotlib notebook`
+    In an IPython notebook with ``%matplotlib notebook``
     
     >>> r = RangeOp(name = "RangeGate",
     ...             channel = 'Y2-A')
@@ -247,10 +250,11 @@ class RangeSelection(Op1DView, HistogramView):
 
     # internal state.
     _ax = Any(transient = True)
-    _span = Instance(util.SpanSelector, transient = True)
+    _span = Instance(SpanSelector, transient = True)
     _low_line = Instance(Line2D, transient = True)
     _high_line = Instance(Line2D, transient = True)
     _hline = Instance(Line2D, transient = True)
+    _line_props = Dict()
             
     def plot(self, experiment, **kwargs):
         """
@@ -258,19 +262,29 @@ class RangeSelection(Op1DView, HistogramView):
         
         Parameters
         ----------
+        
+        line_props : Dict
+           The properties of the `matplotlib.lines.Line2D` that are drawn
+           on top of the histogram.  They're passed directly to the 
+           `matplotlib.lines.Line2D` constructor.
+           Default: ``{color : 'black', linewidth : 2}``
         """
         
         if experiment is None:
             raise util.CytoflowViewError('experiment',
                                          "No experiment specified")
+            
+        self._line_props = kwargs.pop('line_props',
+                                        {'color' : 'black',
+                                         'linewidth' : 2})
 
         super(RangeSelection, self).plot(experiment, **kwargs)
         self._ax = plt.gca()
-        self._draw_span()
-        self._interactive()
+        self._draw_span(None)
+        self._interactive(None)
 
-    @on_trait_change('op.low, op.high', post_init = True)
-    def _draw_span(self):
+    @observe('[op.low,op.high]', post_init = True)
+    def _draw_span(self, _):
         if not (self._ax and self.op.low and self.op.high):
             return
         
@@ -283,26 +297,27 @@ class RangeSelection(Op1DView, HistogramView):
         if self._hline and self._hline in self._ax.lines:
             self._hline.remove()
             
-
-        self._low_line = plt.axvline(self.op.low, linewidth=3, color='blue')
-        self._high_line = plt.axvline(self.op.high, linewidth=3, color='blue')
+        self._low_line = plt.axvline(self.op.low, **self._line_props)
+        self._high_line = plt.axvline(self.op.high, **self._line_props)
             
         ymin, ymax = plt.ylim()
         y = (ymin + ymax) / 2.0
         self._hline = plt.plot([self.op.low, self.op.high], 
-                               [y, y], 
-                               color='blue', 
-                               linewidth = 2)[0]
-                                   
+                               [y, y], **self._line_props)[0]     
+                               
         plt.draw()
     
-    @on_trait_change('interactive', post_init = True)
-    def _interactive(self):
+    @observe('interactive', post_init = True)
+    def _interactive(self, _):
         if self._ax and self.interactive:
-            self._span = util.SpanSelector(self._ax, 
-                                           onselect=self._onselect, 
-                                           span_stays=False,
-                                           useblit = True)
+            self._span = SpanSelector(self._ax, 
+                                      onselect = self._onselect, 
+                                      direction = "horizontal",
+                                      interactive = False,
+                                      props = dict(facecolor = 'none',
+                                                   edgecolor = 'blue',
+                                                   linewidth = 2),
+                                      useblit = True)
         else:
             self._span = None
         

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.views.stats_2d
 -----------------------
-'''
+
+Plots two statistics on a scatter plot.
+
+`Stats2DView` -- the `IView` class that makes the plot.
+"""
 
 from traits.api import provides, Constant
 import matplotlib.pyplot as plt
@@ -37,8 +41,8 @@ from .base_views import Base2DStatisticsView
 class Stats2DView(Base2DStatisticsView):
     """
     Plot two statistics on a scatter plot.  A point (X,Y) is drawn for every
-    pair of elements with the same value of :attr:`variable`; the X value is from 
-    :attr:`xstatistic` and the Y value is from :attr:`ystatistic`.
+    pair of elements with the same value of `variable`; the X value is from 
+    `xstatistic` and the Y value is from `ystatistic`.
     
     Attributes
     ----------
@@ -96,7 +100,7 @@ class Stats2DView(Base2DStatisticsView):
     def enum_plots(self, experiment):
         """
         Returns an iterator over the possible plots that this View can
-        produce.  The values returned can be passed to :meth:`plot`.
+        produce.  The values returned can be passed to `plot`.
         """
                 
         return super().enum_plots(experiment)
@@ -109,7 +113,7 @@ class Stats2DView(Base2DStatisticsView):
         ----------
         
         color : a matplotlib color
-            The color to plot with.  Overridden if :attr:`huefacet` is not ``None``
+            The color to plot with.  Overridden if `huefacet` is not ``None``
             
         linestyle : {'solid' | 'dashed', 'dashdot', 'dotted' | (offset, on-off-dash-seq) | '-' | '--' | '-.' | ':' | 'None' | ' ' | ''}
             
@@ -120,7 +124,7 @@ class Stats2DView(Base2DStatisticsView):
             The marker size in points
             
         markerfacecolor : a matplotlib color
-            The color to make the markers.  Overridden (?) if :attr:`huefacet` is not ``None``
+            The color to make the markers.  Overridden (?) if `huefacet` is not ``None``
             
         alpha : the alpha blending value, from 0.0 (transparent) to 1.0 (opaque)
         

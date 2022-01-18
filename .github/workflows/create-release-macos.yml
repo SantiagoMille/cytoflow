@@ -1,5 +1,5 @@
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -197,12 +197,12 @@ jobs:
         
     - name: Install packaging deps
       run: |
-        conda install --yes --quiet 'sphinx==3.4.3'
-        pip install "pyinstaller==4.2"
+        conda install --yes --quiet 'sphinx==4.2.0' pandoc
+        pip install "pyinstaller==4.8"
         
     - name: Build embedded help docs
       run: |
-        python setup.py build_sphinx -b embedded_help
+        sphinx-build docs/user_manual/reference cytoflowgui/help
         
     - name: Build GUI binary
       run: |

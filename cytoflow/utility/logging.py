@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,11 +20,16 @@
 '''
 cytoflow.utility.logging
 ------------------------
+
+Utilities to help with logging.
+
+`MplFilter` -- a `logging.Filter` that removes nuisance warnings
 '''
 
 import logging
 
 class MplFilter(logging.Filter):
+    """A `logging.Filter` that removes nuisance warnings"""
     def filter(self, record):
         if record.msg == "posx and posy should be finite values":
             return 0

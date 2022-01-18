@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,20 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.view_pane
+---------------------
+
+Dock panes for modifying an `IWorkflowView`\s traits and the parameters
+that are passed to `IView.plot`.
+
+- `ViewDockPane` -- the dock pane to manipulate the traits of the currently
+  selected view.
+  
+- `PlotParamsPane` -- the dock pane to manipulate the parameters passed to
+  `IView.plot`. 
+"""
 
 from traits.api import Instance, List, Str, Dict, Tuple, observe
 from pyface.tasks.api import TraitsDockPane, Task
@@ -88,6 +102,9 @@ class ViewDockPane(TraitsDockPane):
             self._actions[plugin.view_id] = task_action
             self.toolbar.append(task_action)
             
+        # see the comment in cytoflowgui.view_pane for an explanation of this
+        # HintedMainWindow business.
+        
         self._window = window = HintedMainWindow()
         window.addToolBar(QtCore.Qt.RightToolBarArea, 
                           self.toolbar.create_tool_bar(window))

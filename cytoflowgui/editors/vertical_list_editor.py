@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on Feb 11, 2017
+"""
+cytoflowgui.editors.vertical_list_editor
+----------------------------------------
 
-@author: brian
-'''
+A vertical editor for lists, derived from `traitsui.editors.list_editor.ListEditor`,
+with the same API.
+
+.. note::
+    The difference between this class and the underlying **ListEditor** is that 
+    this class doesn't use a scroll area.  Instead, as items are added, it
+    expands.  To enable this behavior, make sure you ask for the 'simple'
+    editor style, NOT 'custom'!
+
+"""
 
 from pyface.qt import QtCore, QtGui
 from pyface.api import ImageResource
@@ -35,12 +44,6 @@ from traitsui.qt4.helper import IconButton
 from traitsui.editors.list_editor import ListItemProxy
 
 class _VerticalListEditor(_ListEditor):
-    """
-    The difference between this class and the underlying ListEditor is that 
-    this class doesn't use a scroll area.  Instead, as items are added, it
-    expands.  To enable this behavior, make sure you ask for the 'simple'
-    editor style, NOT 'custom'!
-    """
     
     delete_mapper = Instance(QtCore.QSignalMapper)
     

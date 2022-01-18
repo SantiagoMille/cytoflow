@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.density
 ---------------------------
-'''
+
+The `density` module has two classes:
+
+`DensityGateOp` -- gates an `Experiment` based on a 
+two-dimensional (smoothed) density plot.
+
+`DensityGateView` -- diagnostic view that plots the gate 
+estimated by the `DensityGateOp`.
+
+"""
 
 from traits.api import (HasStrictTraits, Str, Dict, Any, Instance, 
                         Constant, List, provides, Array)
@@ -192,8 +201,8 @@ class DensityGateOp(HasStrictTraits):
         
         Parameters
         ----------
-        experiment : Experiment
-            The :class:`.Experiment` to use to estimate the gate parameters.
+        experiment : `Experiment`
+            The `Experiment` to use to estimate the gate parameters.
             
         subset : Str (default = None)
             If set, determine the gate parameters on only a subset of the
@@ -311,17 +320,17 @@ class DensityGateOp(HasStrictTraits):
     def apply(self, experiment):
         """
         Creates a new condition based on membership in the gate that was
-        parameterized with :meth:`estimate`.
+        parameterized with `estimate`.
         
         Parameters
         ----------
-        experiment : Experiment
-            the :class:`.Experiment` to apply the gate to.
+        experiment : `Experiment`
+            the `Experiment` to apply the gate to.
             
         Returns
         -------
-        Experiment
-            a new :class:`.Experiment` with the new gate applied.
+        `Experiment`
+            a new `Experiment` with the new gate applied.
         """
             
         if experiment is None:
@@ -425,8 +434,8 @@ class DensityGateOp(HasStrictTraits):
          
         Returns
         -------
-        IView
-            a diagnostic view, call :meth:`~DensityGateView.plot` to see the 
+        `IView`
+            a diagnostic view, call `DensityGateView.plot` to see the 
             diagnostic plot.
         """
         v = DensityGateView(op = self)
@@ -436,7 +445,7 @@ class DensityGateOp(HasStrictTraits):
 @provides(IView)
 class DensityGateView(By2DView, AnnotatingView, DensityView):
     """
-    A diagnostic view for :class:`DensityGateOp`.  Draws a density plot,
+    A diagnostic view for `DensityGateOp`.  Draws a density plot,
     then outlines the selected bins in white.
     
     Attributes
@@ -456,13 +465,23 @@ class DensityGateView(By2DView, AnnotatingView, DensityView):
         Parameters
         ----------
         
+        contour_props : Dict
+            The keyword arguments passed to the 
+            `matplotlib.axes.Axes.contour` constructor, which controls the 
+            visual properties of the contour that's plotted on top of the 
+            density plot. Default: ``{'colors' : 'w'}`` 
+        
         """
+        
+        contour_props = kwargs.pop('contour_props',
+                                   {'colors' : 'w'})
         
         annotations = {}
         for i in self.op._keep_xbins:
             annotations[i] = (self.op._keep_xbins[i],
                               self.op._keep_ybins[i],
-                              self.op._histogram[i])
+                              self.op._histogram[i],
+                              contour_props)
         
         super().plot(experiment,
                      annotations = annotations,
@@ -478,15 +497,18 @@ class DensityGateView(By2DView, AnnotatingView, DensityView):
                          annotation_color, 
                          **kwargs):
         # plot a countour around the bins that got kept
+        
+
   
         keep_x = annotation[0]
         keep_y = annotation[1]
         h = annotation[2]
+        contour_props = annotation[3]
         xbins = self.op._xbins[0:-1]
         ybins = self.op._ybins[0:-1]
         last_level = h[keep_x[-1], keep_y[-1]]
 
-        axes.contour(xbins, ybins, h.T, [last_level], colors = 'w')
+        axes.contour(xbins, ybins, h.T, [last_level], **contour_props)
         
 util.expand_class_attributes(DensityGateView)
 util.expand_method_parameters(DensityGateView, DensityGateView.plot)

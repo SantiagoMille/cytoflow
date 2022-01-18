@@ -1,7 +1,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ Runtime hook -- updates two copies of qt.conf to point to the one-click's
 Qt resources
 '''
 
-import os, sys
+import sys
 from pathlib import Path
 
 qt_path = Path(sys._MEIPASS) / 'PyQt5' / 'Qt'

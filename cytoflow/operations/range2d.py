@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,19 +20,30 @@
 '''
 cytoflow.operations.range2d
 ---------------------------
+
+Applies a 2D range gate (ie, a rectangle gate) to an `Experiment`. 
+`range2d` has two classes:
+
+`Range2DOp` -- Applies the gate, given four thresholds
+
+`ScatterplotRangeSelection2DView` -- an `IView` that allows you to view the 
+range and/or interactively set the thresholds on a scatterplot.
+
+`DensityRangeSelection2DView` -- an `IView` that allows you to view the 
+range and/or interactively set the thresholds on a scatterplot.
 '''
 
 import pandas as pd
 
 from traits.api import HasStrictTraits, Float, Str, Bool, Instance, \
-    provides, on_trait_change, Any, Constant
+    provides, observe, Any, Constant, Dict
 
 from matplotlib.widgets import RectangleSelector
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 import cytoflow.utility as util
-from cytoflow.views import ScatterplotView, ISelectionView
+from cytoflow.views import ScatterplotView, DensityView, ISelectionView
 
 from .i_operation import IOperation
 from .base_op_views import Op2DView
@@ -46,7 +57,7 @@ class Range2DOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Used to name the new metadata field in the
-        experiment that's created by :meth:`apply`
+        experiment that's created by `apply`
         
     xchannel : Str
         The name of the first channel to apply the range gate.
@@ -58,7 +69,7 @@ class Range2DOp(HasStrictTraits):
         The highest value in xchannel to include in this gate.
         
     ychannel : Str
-        The name of the secon channel to apply the range gate.
+        The name of the second channel to apply the range gate.
         
     ylow : Float
         The lowest value in ychannel to include in this gate.
@@ -149,26 +160,26 @@ class Range2DOp(HasStrictTraits):
     ylow = Float(None)
     yhigh = Float(None)
     
-    _selection_view = Instance('RangeSelection2D', transient = True)
+    _selection_view = Instance('_RangeSelection2D', transient = True)
 
     def apply(self, experiment):
         """Applies the threshold to an experiment.
         
         Parameters
         ----------
-        experiment : Experiment
-            the old_experiment to which this op is applied
+        experiment : `Experiment`
+            the `Experiment` to which this op is applied
             
         Returns
         -------
         Experiment
-            a new :class:`~Experiment`, the same as the old experiment but with 
+            a new `Experiment`, the same as the old experiment but with 
             a new column with a data type of ``bool`` and the same as the 
-            operation :attr:`name`.  The bool is ``True`` if the event's 
-            measurement in :attr:`xchannel` is greater than :attr:`xlow` and
-            less than :attr:`high`, and the event's measurement in 
-            :attr:`ychannel` is greater than :attr:`ylow` and less than 
-            :attr:`yhigh`; it is ``False`` otherwise.
+            operation `name`.  The bool is ``True`` if the event's 
+            measurement in `xchannel` is greater than `xlow` and
+            less than `xhigh`, and the event's measurement in 
+            `ychannel` is greater than `ylow` and less than 
+            `yhigh`; it is ``False`` otherwise.
         """
         
         if experiment is None:
@@ -252,42 +263,28 @@ class Range2DOp(HasStrictTraits):
         return new_experiment
     
     def default_view(self, **kwargs):
-        self._selection_view = RangeSelection2D(op = self)
+        """
+        Returns an `IView` that allows a user to view the selection or interactively draw it.
+        
+        Parameters
+        ----------
+        
+        density : bool, default = False
+            If `True`, return a density plot instead of a scatterplot.
+        """ 
+       
+        density = kwargs.pop('density', False)
+
+        if density:
+            self._selection_view = DensityRangeSelection2DView(op = self)
+        else:
+            self._selection_view = ScatterplotRangeSelection2DView(op = self)
+            
         self._selection_view.trait_set(**kwargs)
         return self._selection_view
     
-@provides(ISelectionView)
-class RangeSelection2D(Op2DView, ScatterplotView):
-    """
-    Plots, and lets the user interact with, a 2D selection.
-    
-    Attributes
-    ----------
-    interactive : Bool
-        is this view interactive?  Ie, can the user set min and max
-        with a mouse drag?
-        
-    Notes
-    -----
-    We inherit `xfacet` and `yfacet` from `cytoflow.views.ScatterplotView`, but
-    they must both be unset!
-        
-    Examples
-    --------
-    
-    In a Jupyter notebook with `%matplotlib notebook`
-    
-    >>> r = flow.Range2DOp(name = "Range2D",
-    ...                    xchannel = "V2-A",
-    ...                    ychannel = "Y2-A"))
-    >>> rv = r.default_view()
-    >>> rv.interactive = True
-    >>> rv.plot(ex2) 
-    """
-    
-    id = Constant('edu.mit.synbio.cytoflow.views.range2d')
-    friendly_id = Constant("2D Range Selection")
 
+class _RangeSelection2D(Op2DView):
     xfacet = Constant(None)
     yfacet = Constant(None)
     
@@ -300,6 +297,8 @@ class RangeSelection2D(Op2DView, ScatterplotView):
     _ax = Any(transient = True)
     _selector = Instance(RectangleSelector, transient = True)
     _box = Instance(Rectangle, transient = True)
+    _patch_props = Dict()
+
         
     def plot(self, experiment, **kwargs):
         """
@@ -308,19 +307,30 @@ class RangeSelection2D(Op2DView, ScatterplotView):
         Parameters
         ----------
         
+        patch_props : Dict
+           The properties of the `matplotlib.patches.Patch` that are drawn
+           on top of the scatterplot or density view.  They're passed
+           directly to the `matplotlib.patches.Rectangle` constructor.
+           Default: ``{edgecolor : 'black', linewidth : 2, fill : False}``
+        
         """
         
         if experiment is None:
             raise util.CytoflowViewError('experiment',
                                          "No experiment specified")
+            
+        self._patch_props = kwargs.pop('patch_props',
+                                        {'edgecolor' : 'black',
+                                         'linewidth' : 2,
+                                         'fill' : False})
         
-        super(RangeSelection2D, self).plot(experiment, **kwargs)
+        super(_RangeSelection2D, self).plot(experiment, **kwargs)
         self._ax = plt.gca()
-        self._draw_rect()
-        self._interactive()
+        self._draw_rect(None)
+        self._interactive(None)
 
-    @on_trait_change('op.xlow, op.xhigh, op.ylow, op.yhigh', post_init = True)
-    def _draw_rect(self):
+    @observe('[op.xlow,op.xhigh,op.ylow,op.yhigh]', post_init = True)
+    def _draw_rect(self, _):
         if not self._ax:
             return
         
@@ -331,21 +341,19 @@ class RangeSelection2D(Op2DView, ScatterplotView):
             self._box = Rectangle((self.op.xlow, self.op.ylow), 
                                   (self.op.xhigh - self.op.xlow), 
                                   (self.op.yhigh - self.op.ylow), 
-                                  facecolor="none",
-                                  edgecolor = 'blue',
-                                  linewidth = 2)
+                                  **self._patch_props)
             self._ax.add_patch(self._box)
             plt.draw()
     
-    @on_trait_change('interactive', post_init = True)
-    def _interactive(self):
+    @observe('interactive', post_init = True)
+    def _interactive(self, _):
         if self._ax and self.interactive:
             self._selector = RectangleSelector(
                                 self._ax, 
                                 onselect=self._onselect, 
-                                rectprops=dict(facecolor = 'none',
-                                               edgecolor = 'blue',
-                                               linewidth = 2),
+                                props=dict(facecolor = 'none',
+                                           edgecolor = 'blue',
+                                           linewidth = 2),
                                 useblit = True)
         else:
             self._selector = None
@@ -357,9 +365,67 @@ class RangeSelection2D(Op2DView, ScatterplotView):
         self.op.xhigh = max(pos1.xdata, pos2.xdata)
         self.op.ylow = min(pos1.ydata, pos2.ydata)
         self.op.yhigh = max(pos1.ydata, pos2.ydata)
+
+
+@provides(ISelectionView)
+class ScatterplotRangeSelection2DView(_RangeSelection2D, ScatterplotView):
+    """
+    Plots, and lets the user interact with, a 2D selection.
+    
+    Attributes
+    ----------
+    interactive : Bool
+        is this view interactive?  Ie, can the user set min and max
+        with a mouse drag?
         
-util.expand_class_attributes(RangeSelection2D)
-util.expand_method_parameters(RangeSelection2D, RangeSelection2D.plot) 
+    Examples
+    --------
+    
+    In a Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> r = flow.Range2DOp(name = "Range2D",
+    ...                    xchannel = "V2-A",
+    ...                    ychannel = "Y2-A"))
+    >>> rv = r.default_view()
+    >>> rv.interactive = True
+    >>> rv.plot(ex2) 
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.range2d')
+    friendly_id = Constant("2D Range Selection")
+    
+util.expand_class_attributes(ScatterplotRangeSelection2DView)
+util.expand_method_parameters(ScatterplotRangeSelection2DView, ScatterplotRangeSelection2DView.plot) 
+    
+@provides(ISelectionView)
+class DensityRangeSelection2DView(_RangeSelection2D, DensityView):
+    """
+    Plots, and lets the user interact with, a 2D selection.
+    
+    Attributes
+    ----------
+    interactive : Bool
+        is this view interactive?  Ie, can the user set min and max
+        with a mouse drag?
+        
+    Examples
+    --------
+    
+    In a Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> r = flow.Range2DOp(name = "Range2D",
+    ...                    xchannel = "V2-A",
+    ...                    ychannel = "Y2-A"))
+    >>> rv = r.default_view(density = True)
+    >>> rv.interactive = True
+    >>> rv.plot(ex2) 
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.range2d_density')
+    friendly_id = Constant("2D Range Selection (Density plot)")
+    
+util.expand_class_attributes(DensityRangeSelection2DView)
+util.expand_method_parameters(DensityRangeSelection2DView, DensityRangeSelection2DView.plot) 
     
 if __name__ == '__main__':
     import cytoflow as flow

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -60,6 +60,8 @@ class TestBleedthroughLinear(ClosePlotsWhenDoneTest):
         # TODO - check that the spillover was actually removed
         with self.assertRaises(AssertionError):
             pd.testing.assert_frame_equal(self.ex.data, ex2.data)
+            
+        self.assertIsInstance(ex2.data.index, pd.RangeIndex)
             
     def testApplyDoesntAlterOriginal(self):
         ex_data_copy = self.ex.data.copy(deep = True)

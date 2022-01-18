@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_namespace_packages, Extension
 import io, os
 
 import versioneer
@@ -43,32 +43,33 @@ try:
     cmdclass = versioneer.get_cmdclass({'build_sphinx' : BuildDoc})
 except ImportError:
     cmdclass = versioneer.get_cmdclass()
-        
+            
 setup(
     name = "cytoflow",
     version = versioneer.get_version(),  # @UndefinedVariable
-    packages = find_packages(exclude = ["package", "package.qt"]),
+    packages = find_namespace_packages(exclude = ["package", "package.qt"]),
     cmdclass = cmdclass,
     
     # Project uses reStructuredText, so ensure that the docutils get
     # installed or upgraded on the target machine
-    install_requires = ['numpy==1.20.2',
-                        'pandas==1.2.5',
-                        'matplotlib==3.3.4',
+    install_requires = ['numpy==1.21.2',
+                        'pandas==1.3.5',
+                        'matplotlib==3.5.0',
                         'bottleneck==1.3.2',
-                        'numexpr==2.7.3',
-                        'scipy==1.6.2',
-                        'scikit-learn==0.24.2',
-                        'seaborn==0.11.1',
-                        'statsmodels==0.12.2',
+                        'numexpr==2.8.1',
+                        'scipy==1.7.3',
+                        'scikit-learn==1.0.1',
+                        'seaborn==0.11.2',
+                        'statsmodels==0.13.0',
                         'natsort==7.1.1',
+                        'numba==0.53.1',
                         
                         'traits==6.2.0',
-                        'traitsui==7.1.1',
+                        'traitsui==7.2.1',
                         'pyface==7.3.0',
                         'envisage==6.0.1',
                         'nbformat==5.1.3',
-                        'python-dateutil==2.8.1',
+                        'python-dateutil==2.8.2',
                         'importlib_resources==5.2.0',
 
                         
@@ -98,7 +99,9 @@ setup(
                                       'images/*',
                                       'op_plugins/images/*',
                                       'view_plugins/images/*',
-                                      'help/*.html',
+                                      'editors/images/*',
+                                      'help/operations/*.html',
+                                      'help/views/*.html',
                                       'help/_images/*.png',
                                       'help/_static/*']},
 

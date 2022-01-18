@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,12 @@
 
 
 """ 
-An HTML "editor" that is high-DPI aware
+cytoflowgui.editors.zoomable_html_editor
+----------------------------------------
+
+An HTML "editor" that is high-DPI aware.
+
+Derived from `traitsui.editors.html_editor`
 
 Adapted from:
 https://github.com/enthought/traitsui/blob/master/traitsui/editors/html_editor.py

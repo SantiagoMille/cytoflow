@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,10 +17,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.utility.logicle_scale
 ------------------------------
-'''
+A scale that transforms the data using the ``logicle`` function.
+    
+`LogicleScale` -- implements `IScale`, the `cytoflow` interface for the scale.
+
+`MatplotlibLogicleScale` -- inherits `matplotlib.scale.ScaleBase`, implements
+the matplotlib interface
+
+`LogicleMajorLocator` -- inherits `matplotlib.ticker.Locator`, lets matplotlib know where major
+tics are along a plot axis.
+
+`LogicleMinorLocator` -- inherits `matplotlib.ticker.Locator`, lets matplotlib know where minor
+tics are along a plot axis
+
+"""
 
 import math, sys
 from warnings import warn
@@ -46,7 +59,7 @@ from .cytoflow_errors import CytoflowError, CytoflowWarning
 @provides(IScale)
 class LogicleScale(HasStrictTraits):
     """
-    A scale that transforms the data using the `logicle` function.
+    A scale that transforms the data using the ``logicle`` function.
     
     This scaling method implements a "linear-like" region around 0, and a
     "log-like" region for large values, with a very smooth transition between
@@ -59,12 +72,12 @@ class LogicleScale(HasStrictTraits):
     The transformation has one parameter, `W`, which specifies the width of
     the "linear" range in log10 decades.  By default, the optimal value is
     estimated from the data; but if you assign a value to `W` it will be used.
-    `0.5` is usually a good start.
+    ``0.5`` is usually a good start.
     
     Attributes
     ----------
     experiment : Instance(cytoflow.Experiment)
-        the `cytoflow.Experiment` used to estimate the scale parameters.
+        the `Experiment` used to estimate the scale parameters.
         
     channel : Str
         If set, choose scale parameters from this channel in `experiment`.
@@ -80,7 +93,7 @@ class LogicleScale(HasStrictTraits):
         
     quantiles = Tuple(Float, Float) (default = (0.001, 0.999))
         If there are a few very large or very small values, this can throw off
-        matplotlib's choice of default axis ranges.  Set `quantiles` to choose
+        matplotlib's choice of default axis ranges.  Set ``quantiles`` to choose
         what part of the data to consider when choosing axis ranges.
         
     W : Float (default = estimated from data)
@@ -198,6 +211,10 @@ class LogicleScale(HasStrictTraits):
             raise CytoflowError(str(e))
         
     def clip(self, data):
+        """
+        Clips data to the range of the scale function
+        """
+        
         try:
             logicle_min = self._logicle.inverse(0.0)
             logicle_max = self._logicle.inverse(1.0 - sys.float_info.epsilon)
@@ -219,10 +236,17 @@ class LogicleScale(HasStrictTraits):
             raise CytoflowError(e.strerror)
         
     def norm(self, vmin = None, vmax = None):
+        """
+        A factory function that returns `matplotlib.colors.Normalize` instance,
+        which normalizes values for a `matplotlib` color palette.
+        """
+        
         # it turns out that Logicle is already defined as a normalization to 
         # [0, 1].  vmin and vmax don't actually do anything here.
         class LogicleNormalize(matplotlib.colors.Normalize):
             def __init__(self, scale = None, vmin = None, vmax = None):
+                super().__init__(vmin, vmax)
+                
                 self._scale = scale
                 self.vmin = scale.inverse(0.0)
                 self.vmax = scale.inverse(1.0 - sys.float_info.epsilon)
@@ -342,6 +366,11 @@ class LogicleScale(HasStrictTraits):
 register_scale(LogicleScale)
         
 class MatplotlibLogicleScale(HasTraits, matplotlib.scale.ScaleBase):   
+    """
+    A class that inherits from `matplotlib.scale.ScaleBase`, which 
+    implements all the bits for `matplotlib` to use a new scale.
+    """
+    
     name = "logicle"
     
     logicle = Instance(FastLogicle)

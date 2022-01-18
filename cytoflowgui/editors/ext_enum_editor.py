@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on Apr 16, 2016
+"""
+cytoflowgui.editors.ext_enum_editor
+-----------------------------------
 
-@author: brian
-'''
+A `traitsui.editors.enum_editor.EnumEditor` that allows **_names** to be extended with
+**extra_items** in the factory.
+
+"""
 
 from traits.api import Dict
 
@@ -66,6 +69,7 @@ class _ExtendableEnumEditor(_EnumEditor):
 class ExtendableEnumEditor(EnumEditor):
     
     extra_items = Dict
+    """The extra items for the enum, beyond what's in **names**"""
         
     def _get_simple_editor_class(self):
         """ Returns the editor class to use for "simple" style views.

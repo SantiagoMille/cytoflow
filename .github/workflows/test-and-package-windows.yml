@@ -1,5 +1,5 @@
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,6 +28,10 @@ jobs:
       uses: actions/checkout@v2    
       with:
         submodules: true    
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -73,6 +77,10 @@ jobs:
       with:
         fetch-depth: 0
         submodules: true
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -93,6 +101,10 @@ jobs:
       run: |
         mkdir dist
         python package/move_conda_package.py
+        
+    - name: Copy environment.yml into the dist folder
+      run: |
+        cp environment.yml dist/
         
     - name: List dist
       run: ls dist/
@@ -117,6 +129,10 @@ jobs:
       with:
         fetch-depth: 0
         submodules: true
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -175,6 +191,10 @@ jobs:
       id: display
       run: |
         echo 'Output from Find Tag: ${{steps.tag.outputs.tag}}'
+        
+    - name: Remove nomkl
+      run: |
+        sed -i '/nomkl/d' environment.yml
       
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v2.0.1
@@ -192,8 +212,8 @@ jobs:
         
     - name: Install packaging deps
       run: |
-        conda install --yes --quiet 'sphinx==4.0.2' 'bleach==3.3.0'
-        pip install "pyinstaller==4.2"
+        conda install --yes --quiet 'sphinx==4.2.0' pandoc
+        pip install "pyinstaller==4.8"
         
     - name: Build embedded help docs
       run: |

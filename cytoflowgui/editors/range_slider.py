@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+cytoflowgui.editors.range_slider
+--------------------------------
+
+A ``QtGui.QSlider`` with two carets -- allows a range to be specified.
+"""
+
 from pyface.qt import QtGui, QtCore
 
 class RangeSlider(QtGui.QSlider):
@@ -26,8 +33,8 @@ class RangeSlider(QtGui.QSlider):
         maximum and minimum, as is a normal slider, but instead of having a
         single slider value, there are 2 slider values.
 
-        This class emits the same signals as the QSlider base class, with the
-        exception of valueChanged
+        This class emits the same signals as the ``QtGui.QSlider`` base class, with the
+        exception of ``valueChanged``
     """
     def __init__(self, *args):
         super(RangeSlider, self).__init__(*args)
@@ -45,6 +52,7 @@ class RangeSlider(QtGui.QSlider):
         self.last_active_slider = 0
 
     def low(self):
+        
         return self._low
 
     def setLow(self, low):

@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+cytoflowgui.op_plugins.i_op_plugin
+----------------------------------
+
+"""
 
 from traits.api import Interface, Constant, List
 from envisage.api import Plugin, ExtensionPoint
@@ -32,10 +37,10 @@ class IOperationPlugin(Interface):
         The Envisage ID used to refer to this plugin
         
     operation_id : Constant
-        Same as the "id" attribute of the IOperation this plugin wraps.
+        Same as the ``id`` attribute of the IOperation this plugin wraps.
         
     short_name : Constant
-        The operation's "short" name - for menus and toolbar tool tips
+        The operation's ``short`` name - for menus and toolbar tool tips
     """
 
     operation_id = Constant
@@ -43,11 +48,11 @@ class IOperationPlugin(Interface):
 
     def get_operation(self):
         """
-        Makes an instance of the IWorkflowOperation that this plugin wraps.
+        Makes an instance of the `IWorkflowOperation` that this plugin wraps.
         
         Returns
         -------
-        :class:`.IWorkflowOperation`
+        `IWorkflowOperation`
         """
         
     def get_handler(self, model):
@@ -61,7 +66,7 @@ class IOperationPlugin(Interface):
         
         Returns
         -------
-        :class:`traitsui.Controller`
+        `traitsui.handler.Controller`
         """
 
     def get_icon(self):
@@ -70,7 +75,7 @@ class IOperationPlugin(Interface):
         
         Returns
         -------
-        :class:`pyface.ImageResource`
+        `pyface.i_image_resource.IImageResource`
             The SVG icon
         """
         
@@ -78,7 +83,7 @@ class IOperationPlugin(Interface):
     def get_help(self):
         """
         Gets the HTML help text for this plugin, deriving the filename from the class name.
-        Probably best to use the default implementation in :class:`PluginHelpMixin`
+        Probably best to use the default implementation in `cytoflowgui.op_plugins.op_plugin_base.PluginHelpMixin`
         
          
         Returns
@@ -91,11 +96,11 @@ class IOperationPlugin(Interface):
     plugin = List(contributes_to = OP_PLUGIN_EXT)
     def _plugin_default(self):
         """
-        Gets the :mod:`envisage` plugin for this operation (usually `self`).
+        Gets the `envisage` plugin for this operation (usually `self`).
         
         Returns
         -------
-        :class:`envisage.Plugin`
+        `envisage.plugin.Plugin`
             the plugin instance
         """
         

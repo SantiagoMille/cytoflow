@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,11 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
-Created on Mar 7, 2015
+"""
+cytoflowgui
+-----------
 
-@author: brian
-'''
+The `cytoflowgui` package contains the Qt GUI for `cytoflow`.
+"""
 
 import sip  # @UnresolvedImport
 

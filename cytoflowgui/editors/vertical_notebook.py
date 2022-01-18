@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,14 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+cytoflowgui.editors.vertical_notebook
+-------------------------------------
+
+The model for `cytoflowgui.editors.vertical_notebook_editor.VerticalNotebookEditor`.
+
+"""
 
 # for local debugging
 if __name__ == '__main__':
@@ -40,61 +48,63 @@ class VerticalNotebookPage(HasPrivateTraits):
 
     #-- Public Traits --------------------------------------------------------
 
-    # The name of the page (displayed on its 'tab') [Set by client]:
     name = Str
+    """The name of the page (displayed on its 'tab')"""
 
-    # The description of the page (displayed in smaller text in the button):
     description = Str
-
-    # The Traits UI associated with this page [Set by client]:
+    """ The description of the page (displayed in smaller text in the button)"""
+    
     ui = Instance(UI)
+    """The Traits UI associated with this page """
 
-    # Optional client data associated with the page [Set/Get by client]:
     data = Any
+    """Optional client data associated with the page """
 
-    # The HasTraits object whose trait we look at to set the page name
     name_object = Instance(HasTraits)
+    """The HasTraits object whose trait we look at to set the page name"""
 
-    # The name of the *name_object* trait that signals a page name change
-    # [Set by client]:
     name_object_trait = Str
+    """The name of the *name_object* trait that signals a page name change"""
 
-    # The HasTraits object whose trait we look at to set the page description
     description_object = Instance(HasTraits)
+    """The HasTraits object whose trait we look at to set the page description"""
 
-    # The name of the *description_object* trait that signals a page description
-    # change [Set by client]
     description_object_trait = Str
+    """The name of the *description_object* trait that signals a page description change"""
 
-    # The icon for the page button -- a Str that is the name of an ImageResource
     icon = Str('ok')
-    
-    # The HasTraits object whose trait we look at to set the page icon
-    icon_object = Instance(HasTraits)
-    
-    # The name of the *icon_object* trait that signals an icon change
-    icon_object_trait = Str
-    
-    # If the notebook has "delete" buttons, can this page be deleted?
-    deletable = Bool(False)
-    
-    # The HasTraits object whose trait we look at to set the delete button
-    # enabled or disabled
-    deletable_object = Instance(HasTraits)
-    
-    # The name of the *deletable_object* trait that signals a deletable change
-    deletable_object_trait = Str
+    """The icon for the page button -- a Str that is the name of an ImageResource"""
 
-    # The parent window for the client page [Get by client]:
+    icon_object = Instance(HasTraits)
+    """The HasTraits object whose trait we look at to set the page icon"""
+
+    icon_object_trait = Str
+    """The name of the *icon_object* trait that signals an icon change"""
+
+    
+    deletable = Bool(False)
+    """If the notebook has "delete" buttons, can this page be deleted?"""
+
+    deletable_object = Instance(HasTraits)
+    """
+    The HasTraits object whose trait we look at to set the delete button
+    enabled or disabled
+    """
+    
+    deletable_object_trait = Str
+    """The name of the *deletable_object* trait that signals a deletable change"""
+
     parent = Property
+    """The parent window for the client page"""
 
     #-- Traits for use by the Notebook ----------------------------------------
 
-    # The current open status of the notebook page:
     is_open = Bool(False)
+    """The current open status of the notebook page"""
 
-    # The minimum size for the page:
     min_size = Property
+    """The minimum size for the page"""
+
 
     #-- Private Traits -------------------------------------------------------
 
@@ -222,7 +232,7 @@ class VerticalNotebookPage(HasPrivateTraits):
         """ 
         Returns the control cluster for the notebook page
         """
-        self.layout = QtGui.QVBoxLayout()
+        self.layout = QtGui.QVBoxLayout()        
         control = QtGui.QWidget()
         dpi = control.physicalDpiX()
 
@@ -242,9 +252,11 @@ class VerticalNotebookPage(HasPrivateTraits):
         self.cmd_button.setIcon(ImageResource('ok').create_icon())
         self.cmd_button.setIconSize(QtCore.QSize(dpi * 0.2, dpi * 0.2))
         
-        self.cmd_button.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
-                                                        QtGui.QSizePolicy.Expanding))
-         
+        size_policy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding,
+                                        QtGui.QSizePolicy.Preferred)
+        size_policy.setHeightForWidth(True)
+        self.cmd_button.setSizePolicy(size_policy)
+
         buttons_layout.addWidget(self.cmd_button)
         
         if self.notebook.delete:
@@ -271,6 +283,7 @@ class VerticalNotebookPage(HasPrivateTraits):
         separator.setFrameShadow(QtGui.QFrame.Sunken)
         self.layout.addWidget(separator)
         
+        self.layout.setContentsMargins(11, 0, 5, 0)
         control.setLayout(self.layout)
         return control
 
@@ -426,17 +439,18 @@ class VerticalNotebook(HasPrivateTraits):
 
     #-- Public Traits --------------------------------------------------------
 
-    # Allow multiple open pages at once?
     multiple_open = Bool(False)
+    """Allow multiple open pages at once?"""
+
     
-    # can the editor delete list items?
     delete = Bool(False)
+    """can the editor delete list items?"""
 
-    # The pages contained in the notebook:
     pages = List(VerticalNotebookPage)
+    """The pages contained in the notebook"""
 
-    # The traits UI editor this notebook is associated with (if any):
     editor = Instance(Editor)
+    """The traits UI editor this notebook is associated with (if any)"""
 
     #-- Private Traits -------------------------------------------------------
 
@@ -454,7 +468,6 @@ class VerticalNotebook(HasPrivateTraits):
         """
 
         self.layout = QtGui.QVBoxLayout()
-
         self.control = QtGui.QWidget()
         self.control.setLayout(self.layout)
 

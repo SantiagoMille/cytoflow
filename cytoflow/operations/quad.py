@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,22 +17,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 cytoflow.operations.quad
 ------------------------
-'''
+
+Applies a (2D) quad gate to an `Experiment`. `quad` has two classes:
+
+`QuadOp` -- Applies the gate, given a pair of thresholds
+
+`ScatterplotQuadSelectionView` -- an `IView` that allows you to view the 
+quadrants and/or interactively set the thresholds on a scatterplot.
+
+`ScatterplotQuadSelectionView` -- an `IView` that allows you to view the 
+quadrants and/or interactively set the thresholds on a density plot.
+"""
 
 from traits.api import (HasStrictTraits, Float, Str, Bool, Instance,
-                        provides, on_trait_change, Any, Constant)
+                        provides, observe, Any, Constant, Dict)
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.widgets import Cursor
 
 import numpy as np
 import pandas as pd
 
 import cytoflow.utility as util
-from cytoflow.views import ISelectionView, ScatterplotView
+from cytoflow.views import ISelectionView, ScatterplotView, DensityView
 
 from .i_operation import IOperation
 from .base_op_views import Op2DView
@@ -43,7 +54,7 @@ class QuadOp(HasStrictTraits):
     """
     Apply a quadrant gate to a cytometry experiment.
     
-    Creates a new metadata column named :attr:`name`, with values 
+    Creates a new metadata column named `name`, with values 
     ``name_1`` (upper-left quadrant), ``name_2`` (upper-right), 
     ``name_3`` (lower-left), and ``name_4`` (lower-right).  This
     ordering is arbitrary, and was chosen to match the FACSDiva order.
@@ -52,7 +63,7 @@ class QuadOp(HasStrictTraits):
     ----------
     name : Str
         The operation name.  Used to name the new metadata field in the
-        experiment that's created by :meth:`apply`
+        experiment that's created by `apply`
         
     xchannel : Str
         The name of the first channel to apply the range gate.
@@ -145,24 +156,30 @@ class QuadOp(HasStrictTraits):
     ychannel = Str
     ythreshold = Float(None)
     
-    _selection_view = Instance('QuadSelection', transient = True)
+    _selection_view = Instance('_QuadSelection', transient = True)
 
     def apply(self, experiment):
-        """Applies the quad gate to an experiment.
+        """
+        Applies the quad gate to an experiment.
         
         Parameters
         ----------
-        experiment : Experiment
-            the old experiment to which this op is applied
+        experiment : `Experiment`
+            the `Experiment` to which this op is applied
             
         Returns
         -------
         Experiment
-            a new :class:`~Experiment`, the same as the old :class:`~Experiment` 
-            but with a new column the same as the operation :attr:`name`.  
+            a new `Experiment`, the same as the old `Experiment` 
+            but with a new column the same as the operation `name`.  
             The new column is of type *Category*, with values ``name_1``, ``name_2``, 
             ``name_3``, and ``name_4``, applied to events CLOCKWISE from upper-left.
 
+        Raises
+        ------
+        CytoflowOpError
+            if for some reason the operation can't be applied to this
+            experiment. The reason is in the ``args`` attribute of `CytoflowOpError`.
         """
 
         # TODO - the naming scheme (name_1, name_2, etc) is semantically weak.  
@@ -242,41 +259,26 @@ class QuadOp(HasStrictTraits):
         return new_experiment
     
     def default_view(self, **kwargs):
-        self._selection_view = QuadSelection(op = self)
+        """
+        Returns an `IView` that allows a user to view the quad selector or interactively draw it.
+        
+        Parameters
+        ----------
+        
+        density : bool, default = False
+            If `True`, return a density plot instead of a scatterplot.
+        """ 
+        
+        density = kwargs.pop('density', False)
+        if density:
+            self._selection_view = DensityQuadSelectionView(op = self)
+        else:
+            self._selection_view = ScatterplotQuadSelectionView(op = self)
+
         self._selection_view.trait_set(**kwargs)
         return self._selection_view
     
-@provides(ISelectionView)
-class QuadSelection(Op2DView, ScatterplotView):
-    """Plots, and lets the user interact with, a quadrant gate.
-    
-    Attributes
-    ----------
-    interactive : Bool
-        is this view interactive?  Ie, can the user set the threshold with a 
-        mouse click?
-        
-    Notes
-    -----
-    We inherit :attr:`xfacet` and :attr:`yfacet` from 
-    :class:`cytoflow.views.ScatterplotView`, but they must both be unset!
-        
-    Examples
-    --------
-    
-    In an Jupyter notebook with `%matplotlib notebook`
-    
-    >>> q = flow.QuadOp(name = "Quad",
-    ...                 xchannel = "V2-A",
-    ...                 ychannel = "Y2-A"))
-    >>> qv = q.default_view()
-    >>> qv.interactive = True
-    >>> qv.plot(ex2) 
-    """
-    
-    id = Constant('edu.mit.synbio.cytoflow.views.quad')
-    friendly_id = Constant("Quadrant Selection")
-    
+class _QuadSelection(Op2DView):
     xfacet = Constant(None)
     yfacet = Constant(None)
     
@@ -290,28 +292,25 @@ class QuadSelection(Op2DView, ScatterplotView):
     _ax = Any(transient = True)
     _hline = Instance(Line2D, transient = True)
     _vline = Instance(Line2D, transient = True)
-    _cursor = Instance(util.Cursor, transient = True)
+    _cursor = Instance(Cursor, transient = True)
+    _line_props = Dict()
         
-    def plot(self, experiment, **kwargs):
-        """
-        Plot the underlying scatterplot and then plot the selection on top of it.
-        
-        Parameters
-        ----------
-        
-        """
-        
+    def plot(self, experiment, **kwargs):      
         if experiment is None:
             raise util.CytoflowViewError('experiment',
                                          "No experiment specified")
+            
+        self._line_props = kwargs.pop('line_props',
+                                       {'color' : 'black',
+                                        'linewidth' : 2})
         
         super().plot(experiment, **kwargs)
         self._ax = plt.gca()
-        self._draw_lines()
-        self._interactive()
+        self._draw_lines(None)
+        self._interactive(None)
 
-    @on_trait_change('op.xthreshold, op.ythreshold', post_init = True)
-    def _draw_lines(self):
+    @observe('[op.xthreshold,op.ythreshold]', post_init = True)    
+    def _draw_lines(self, _):
         if not self._ax:
             return
         
@@ -320,25 +319,21 @@ class QuadSelection(Op2DView, ScatterplotView):
             
         if self._vline and self._vline in self._ax.lines:
             self._vline.remove()
-            
+                        
         if self.op.xthreshold and self.op.ythreshold:
-            self._hline = plt.axhline(self.op.ythreshold, 
-                                      linewidth = 3, 
-                                      color = 'blue')
-            self._vline = plt.axvline(self.op.xthreshold,
-                                      linewidth = 3,
-                                      color = 'blue')
-
+            self._hline = plt.axhline(self.op.ythreshold, **self._line_props) 
+            self._vline = plt.axvline(self.op.xthreshold, **self._line_props)
+            
             plt.draw()
 
-    @on_trait_change('interactive', post_init = True)
-    def _interactive(self):
+    @observe('interactive', post_init = True)
+    def _interactive(self, _):
         if self._ax and self.interactive and self._cursor is None:
-            self._cursor = util.Cursor(self._ax,
-                                       horizOn = True,
-                                       vertOn = True,
-                                       color = 'blue',
-                                       useblit = True) 
+            self._cursor = Cursor(self._ax,
+                                  horizOn = True,
+                                  vertOn = True,
+                                  color = 'blue',
+                                  useblit = True) 
             self._cursor.connect_event('button_press_event', self._onclick)
         elif not self.interactive and self._cursor is not None:
             self._cursor.disconnect_events()
@@ -348,9 +343,101 @@ class QuadSelection(Op2DView, ScatterplotView):
         """Update the threshold location"""
         self.op.xthreshold = event.xdata
         self.op.ythreshold = event.ydata  
+    
+
+@provides(ISelectionView)
+class ScatterplotQuadSelectionView(_QuadSelection, ScatterplotView):
+    """
+    Plots, and lets the user interact with, a quadrant gate.
+    
+    Attributes
+    ----------
+    interactive : Bool
+        is this view interactive?  Ie, can the user set the threshold with a 
+        mouse click?
         
-util.expand_class_attributes(QuadSelection)
-util.expand_method_parameters(QuadSelection, QuadSelection.plot)  
+    Examples
+    --------
+    
+    In an Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> q = flow.QuadOp(name = "Quad",
+    ...                 xchannel = "V2-A",
+    ...                 ychannel = "Y2-A"))
+    >>> qv = q.default_view()
+    >>> qv.interactive = True
+    >>> qv.plot(ex2) 
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.quad')
+    friendly_id = Constant("Quadrant Selection")
+    
+    def plot(self, experiment, **kwargs):
+        """
+        Plot the default view, and then draw the quad selection on top of it.
+        
+        Parameters
+        ----------
+        
+        line_props : Dict
+           The properties of the `matplotlib.lines.Line2D` that are drawn
+           on top of the scatterplot or density view.  They're passed
+           directly to the `matplotlib.lines.Line2D` constructor.
+           Default: ``{color : 'black', linewidth : 2}``
+        
+        """
+        super().plot(experiment, **kwargs)
+    
+util.expand_class_attributes(ScatterplotQuadSelectionView)
+util.expand_method_parameters(ScatterplotQuadSelectionView, ScatterplotQuadSelectionView.plot)  
+    
+    
+@provides(ISelectionView)
+class DensityQuadSelectionView(_QuadSelection, DensityView):
+    """
+    Plots, and lets the user interact with, a quadrant gate on a density view
+    
+    Attributes
+    ----------
+    interactive : Bool
+        is this view interactive?  Ie, can the user set the threshold with a 
+        mouse click?
+        
+    Examples
+    --------
+    
+    In an Jupyter notebook with ``%matplotlib notebook``
+    
+    >>> q = flow.QuadOp(name = "Quad",
+    ...                 xchannel = "V2-A",
+    ...                 ychannel = "Y2-A"))
+    >>> qv = q.default_view(density = True)
+    >>> qv.interactive = True
+    >>> qv.plot(ex2) 
+    """
+    
+    id = Constant('edu.mit.synbio.cytoflow.views.quad_density')
+    friendly_id = Constant("Quadrant Selection (Density Plot)")
+    
+    def plot(self, experiment, **kwargs):
+        """
+        Plot the default view, and then draw the quad selection on top of it.
+        
+        Parameters
+        ----------
+        
+        line_props : Dict
+           The properties of the `matplotlib.lines.Line2D` that are drawn
+           on top of the scatterplot or density view.  They're passed
+           directly to the `matplotlib.lines.Line2D` constructor.
+           Default: ``{color : 'black', linewidth : 2}``
+        
+        """
+        super().plot(experiment, **kwargs)
+    
+util.expand_class_attributes(DensityQuadSelectionView)
+util.expand_method_parameters(DensityQuadSelectionView, DensityQuadSelectionView.plot)  
+
     
 if __name__ == '__main__':
     import cytoflow as flow

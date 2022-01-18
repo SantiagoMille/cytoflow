@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,6 +20,10 @@
 """
 cytoflow.views.densityplot
 --------------------------
+
+Plot a 2D density plot.
+
+`DensityView` -- the `IView` class that makes the plot.
 """
 
 from traits.api import provides, Constant
@@ -72,8 +76,8 @@ class DensityView(Base2DView):
         ...                 ychannel = 'Y2-A',
         ...                 yscale = 'log').plot(ex)
         
-    The same plot, smoothed, with a log color scale.  *Note - you can change
-    the hue scale, even if you don't have control over the hue facet!*
+    The same plot, smoothed, with a log color scale.  *Note - you can change*
+    *the hue scale, even if you don't have control over the hue facet!*
     
     .. plot::
         :context: close-figs
@@ -107,7 +111,7 @@ class DensityView(Base2DView):
             
         cmap : cmap
             An instance of matplotlib.colors.Colormap.  By default, the 
-            `viridis` colormap is used
+            ``viridis`` colormap is used
             
         under_color : matplotlib color
             Sets the color to be used for low out-of-range values.
@@ -117,7 +121,7 @@ class DensityView(Base2DView):
             
         Notes
         -----
-        Other `kwargs` are passed to `matplotlib.axes.Axes.pcolormesh <https://matplotlib.org/api/_as_gen/matplotlib.axes.Axes.pcolormesh.html>`_
+        Other ``kwargs`` are passed to `matplotlib.axes.Axes.pcolormesh`
         
         """
         

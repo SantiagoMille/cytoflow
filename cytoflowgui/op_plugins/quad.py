@@ -2,7 +2,7 @@
 # coding: latin-1
 
 # (c) Massachusetts Institute of Technology 2015-2018
-# (c) Brian Teague 2018-2021
+# (c) Brian Teague 2018-2022
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ Quadrant Gate
 -------------
 
 Draw a "quadrant" gate.  To create a new gate, just click where you'd like the
-intersection to be. Creates a new metadata column named :attr:`name`, with values 
+intersection to be. Creates a new metadata column named `name`, with values 
 ``name_1`` (upper-left quadrant), ``name_2`` (upper-right), 
 ``name_3`` (lower-left), and ``name_4`` (lower-right).
 
