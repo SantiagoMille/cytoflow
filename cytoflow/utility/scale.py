@@ -203,7 +203,8 @@ def get_default_scale():
 # register the new scales
 import cytoflow.utility.linear_scale   # @UnusedImport
 import cytoflow.utility.log_scale      # @UnusedImport
-import cytoflow.utility.logicle_scale  # @UnusedImport
+#import cytoflow.utility.logicle_scale  # @UnusedImport
+print('HIIIII')
 
 # this scale is REALLY SLOW.  If you want it for your analysis, you can
 # import it into your script, that will register it with the global list.
